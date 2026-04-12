@@ -31,7 +31,7 @@ zip -r "$ZIP_PATH" .
 cd ..
 
 # 5. Add your FastAPI app code into the same zip file
-zip -r "$ZIP_PATH" main.py
+zip -r "$ZIP_PATH" src/*.py
 
 # 6. Clean up temporary files
 rm -rf packages
