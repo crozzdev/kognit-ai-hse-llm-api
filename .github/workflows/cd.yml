@@ -10,6 +10,7 @@ env:
   FUNCTION_NAME: kognit-ai-hse-llm-api
   ALIAS_NAME: prod
   ZIP_NAME: kognit-ai-hse-llm-api.zip
+  AWS_REGION: us-east-1
 
 jobs:
   deploy-aws-lambda:
