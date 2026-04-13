@@ -1,0 +1,29 @@
+{
+    "version": "2.0",
+    "routeKey": "GET /health",
+    "rawPath": "/health",
+    "rawQueryString": "",
+    "headers": {
+        "content-type": "application/json",
+        "host": "kvze1m2kkj.execute-api.us-east-1.amazonaws.com"
+    },
+    "requestContext": {
+        "accountId": "031106380922",
+        "apiId": "kvze1m2kkj",
+        "domainName": "kvze1m2kkj.execute-api.us-east-1.amazonaws.com",
+        "domainPrefix": "kvze1m2kkj",
+        "http": {
+            "method": "GET",
+            "path": "/health",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "0.0.0.0",
+            "userAgent": "github-actions-integration-test"
+        },
+        "requestId": "test-request-id",
+        "routeKey": "GET /health",
+        "stage": "$default",
+        "time": "12/Apr/2026:20:00:00 +0000",
+        "timeEpoch": 1744495200
+    },
+    "isBase64Encoded": false
+}

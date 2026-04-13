@@ -213,3 +213,6 @@ dist/
 
 # MacOS
 .DS_Store
+
+# Local integration test
+response.json
