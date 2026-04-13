@@ -61,7 +61,7 @@ jobs:
           UV_CACHE_DIR: .uv-cache
 
       - name: Pytest + coverage
-        run: uv run --locked pytest --cov=. --cov-report=xml --cov-report=term-missing
+        run: uv run --locked pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=80
         env:
           UV_CACHE_DIR: .uv-cache
 

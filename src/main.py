@@ -11,7 +11,7 @@ app = FastAPI(title="Kognit AI HSE LLM API", root_path="/llm")
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "LLM API"}
 
 
 @app.get("/items/{item_id}")
