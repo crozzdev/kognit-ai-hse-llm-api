@@ -8,7 +8,7 @@ client = TestClient(app)
 def test_read_root():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"Hello": "LLM API"}
+    assert response.json() == {"Hello": "LLM API from GitHub Actions!"}
 
 
 def test_read_item():
