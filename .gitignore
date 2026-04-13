@@ -210,3 +210,9 @@ __marimo__/
 packages/
 dist/
 *.zip
+
+# MacOS
+.DS_Store
+
+# Local integration test
+response.json
