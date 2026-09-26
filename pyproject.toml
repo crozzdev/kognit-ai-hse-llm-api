@@ -9,10 +9,13 @@ dependencies = [
     "fastapi[standard]==0.135.2",
     "mangum>=0.21.0",
     "psycopg[binary,pool]>=3.3.3",
+    "pydantic-settings>=2.13.1",
+    "sqlglot>=27.28.0",
 ]
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.140.3",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
 ]

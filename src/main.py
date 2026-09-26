@@ -1,40 +1,18 @@
-from fastapi import FastAPI
+"""AWS Lambda entry module: the FastAPI app and the Mangum handler.
+
+This is the only module with a dual-root import shim (R15.27): it must import
+whether the package root is the repository root or the ``src`` directory.
+Everything under ``kognit_llm/**`` uses relative imports and is root-agnostic.
+"""
+
 from mangum import Mangum
 
-try:
-    import config  # Local dev
-except ImportError:
-    from src import config  # AWS Lambda
+try:  # package root = repository root
+    from src.kognit_llm.api.app import create_app
+    from src.kognit_llm.config.settings import get_settings
+except ImportError:  # package root = src directory
+    from kognit_llm.api.app import create_app
+    from kognit_llm.config.settings import get_settings
 
-app = FastAPI(title="Kognit AI HSE LLM API", root_path="/llm")
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "LLM API from GitHub Actions!"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str | None = None):
-    return {"item_id": item_id, "q": q}
-
-
-# ── Health Check Endpoint ─────────────────────────────────────────────────────
-@app.get("/health")
-def health_check():
-    """Health check endpoint for AWS Lambda and postgres connectivity."""
-    pg_status = config.check_postgres()
-    # TO-DO: Health check for OpeanAI API connectivity can be added here in the future
-    all_ok = pg_status["status"] == "ok"
-    return {
-        "postgres": pg_status,
-        "overall": {
-            "status": "ok" if all_ok else "failed",
-            "message": "✅ All connections healthy"
-            if all_ok
-            else "❌ One or more connections failed",
-        },
-    }
-
-
-handler = Mangum(app, api_gateway_base_path="/llm")
+app = create_app(get_settings())
+handler = Mangum(app, api_gateway_base_path="/llm")  # R15.14, R15.36
