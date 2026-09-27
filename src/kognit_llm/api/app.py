@@ -88,10 +88,14 @@ def _build_chat_router(settings: "Settings"):
     from kognit_llm.data.executor import WarehouseExecutor
     from kognit_llm.data.pool import build_pool
     from kognit_llm.memory.in_memory import InMemoryConversationStore
+    from kognit_llm.observability.logger import RequestLogger
+    from kognit_llm.observability.redaction import Redactor
     from kognit_llm.providers.factory import build_provider
     from kognit_llm.schema.allowlist import load_allowlist
 
-    resolver = SecretResolver(settings=settings)
+    redactor = Redactor()
+    resolver = SecretResolver(settings=settings, publish=redactor.publish)
+    logger = RequestLogger(redactor)
     provider = build_provider(settings, resolver)
     store = InMemoryConversationStore(
         turn_max=settings.conversation_turn_max,
@@ -116,7 +120,7 @@ def _build_chat_router(settings: "Settings"):
         allowlist=load_allowlist(),
     )
     graph = build_graph(deps)
-    return build_chat_router(settings, deps, graph)
+    return build_chat_router(settings, deps, graph, logger)
 
 
 def _utcnow() -> datetime:

@@ -17,6 +17,8 @@ from kognit_llm.agent.guard import CURRENT_TELEMETRY
 from kognit_llm.agent.state import ErrorCategory, TurnOutcome, TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
 from kognit_llm.api.models import ChatRequest, ChatResponse, normalize_message
+from kognit_llm.observability.fields import ENVIRONMENT_LOG_VALUE
+from kognit_llm.observability.logger import RequestLogger
 
 if TYPE_CHECKING:
     from kognit_llm.agent.nodes.deps import NodeDeps
@@ -46,7 +48,7 @@ _REJECTED_OUTCOMES = frozenset(
 
 
 def build_chat_router(
-    settings: "Settings", deps: "NodeDeps", graph: Any
+    settings: "Settings", deps: "NodeDeps", graph: Any, logger: RequestLogger
 ) -> APIRouter:
     """Return a router exposing ``POST /chat/message`` bound to the compiled graph."""
     router = APIRouter()
@@ -54,18 +56,20 @@ def build_chat_router(
     @router.post("/chat/message")
     def chat_message(payload: ChatRequest, request: Request) -> Response:
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+        correlation_id = getattr(request.state, "correlation_id", request_id)
         conversation_id = payload.conversation_id or str(uuid.uuid4())
         message = normalize_message(payload.message)
         if not message or len(message) > settings.message_max_chars:
             # The field validator normally rejects these; guard the direct path.
             return _validation_response(request_id, conversation_id)
 
+        started = datetime.now(UTC)
         context = deps.store.get_context("DEMO", conversation_id)
         seed = TurnState(
             request_id=request_id,
             conversation_id=conversation_id,
             raw_message=message,
-            turn_started_at=datetime.now(UTC),
+            turn_started_at=started,
             conversation_context=list(context),
         )
 
@@ -76,9 +80,63 @@ def build_chat_router(
         finally:
             CURRENT_TELEMETRY.reset(token)
 
-        return _to_response(final, request_id, conversation_id, settings)
+        response = _to_response(final, request_id, conversation_id, settings)
+        _log_request(
+            logger, settings, final, telemetry, correlation_id, message, started
+        )
+        return response
 
     return router
+
+
+def _log_request(
+    logger: RequestLogger,
+    settings: "Settings",
+    state: TurnState,
+    telemetry: TurnTelemetry,
+    correlation_id: str,
+    message: str,
+    started: datetime,
+) -> None:
+    """Emit exactly one request log entry after the outcome is determined (R14.1)."""
+    outcome = state.turn_outcome or TurnOutcome.INTERNAL_ERROR
+    duration_ms = int((datetime.now(UTC) - started).total_seconds() * 1000)
+    fields: dict[str, Any] = {
+        "request_id": state.request_id,
+        "correlation_id": correlation_id,
+        "conversation_id": state.conversation_id,
+        "user_id": state.user_id,
+        "timestamp": started.isoformat(timespec="milliseconds"),
+        "turn_outcome": outcome.value,
+        "scope_decision": state.scope_decision or "IN_SCOPE",
+        "intent": state.intent or "NOT_CLASSIFIED",
+        "context_turn_count": len(state.conversation_context),
+        "message_length": len(message),
+        "model_call_count": state.model_call_count,
+        "query_outcome": "SUCCESS" if state.result_set is not None else "NOT_EXECUTED",
+        "total_duration_ms": duration_ms,
+        "service": "kognit-ai-hse-llm-api",
+        "service_version": settings.service_version,
+        "environment": ENVIRONMENT_LOG_VALUE.get(
+            settings.environment, settings.environment
+        ),
+        "cold_start": telemetry.cold_start,
+    }
+    if state.error_category is not None:
+        fields["error_category"] = state.error_category.value
+    if state.firewall_verdict is not None:
+        fields["firewall_verdict"] = (
+            "ADMITTED" if state.firewall_verdict.verdict == "ADMIT" else "REJECTED"
+        )
+        if state.firewall_verdict.reason is not None:
+            fields["firewall_reason_code"] = state.firewall_verdict.reason.value
+    if telemetry.model_call_count >= 1:
+        fields["prompt_tokens"] = telemetry.prompt_tokens
+        fields["completion_tokens"] = telemetry.completion_tokens
+        fields["prompt_version"] = settings.prompt_version
+    for node, elapsed in telemetry.stage_ms.items():
+        fields[f"stage_{node}_ms"] = elapsed
+    logger.emit(fields)
 
 
 def _to_response(

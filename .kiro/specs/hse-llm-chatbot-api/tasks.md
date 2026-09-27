@@ -260,17 +260,17 @@ Tasks marked `*` are optional test sub-tasks that may be skipped for a faster MV
     - **Property 10: Response contract invariant**
     - **Validates: Requirements R1.6, R1.7, R1.8, R1.9, R1.10, R1.11, R1.15, R13.17, R17.10**
 
-- [ ] 14. Checkpoint - Ensure all tests pass
+- [x] 14. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 15. Request logger with closed field set and redaction (M-14)
-  - [ ] 15.1 Implement `observability/fields.py` frozen closed log-field set (R14.38) and the `environment` vocabulary mapping (`local→local`, `ci→dev`, `aws→prod`)
+- [x] 15. Request logger with closed field set and redaction (M-14)
+  - [x] 15.1 Implement `observability/fields.py` frozen closed log-field set (R14.38) and the `environment` vocabulary mapping (`local→local`, `ci→dev`, `aws→prod`)
     - _Requirements: R14.26, R14.38_
     - Design: §Log entry, §Cross-field validation (environment-vocabulary reconciliation)
-  - [ ] 15.2 Implement `observability/redaction.py` redaction pass replacing resolved secret values, connection-string shapes, post-`Bearer` substrings and ≥32-char hex/base64 runs with `[REDACTED]`
+  - [x] 15.2 Implement `observability/redaction.py` redaction pass replacing resolved secret values, connection-string shapes, post-`Bearer` substrings and ≥32-char hex/base64 runs with `[REDACTED]`
     - _Requirements: R14.12, R14.13, R14.14, R14.15, R14.32_
     - Design: §Redaction pass
-  - [ ] 15.3 Implement `observability/logger.py` emitting exactly one single-line JSON entry per chat request after the outcome is determined, drawing only from the closed field set with the conditional-presence rules, applying redact → size check → truncate (`truncated_fields`) → serialize, and falling back to a minimal entry on emission failure without changing the response
+  - [x] 15.3 Implement `observability/logger.py` emitting exactly one single-line JSON entry per chat request after the outcome is determined, drawing only from the closed field set with the conditional-presence rules, applying redact → size check → truncate (`truncated_fields`) → serialize, and falling back to a minimal entry on emission failure without changing the response
     - _Requirements: R14.1, R14.2, R14.3, R14.4, R14.5, R14.6, R14.7, R14.8, R14.9, R14.10, R14.16, R14.18, R14.19, R14.20, R14.21, R14.22, R14.23, R14.24, R14.25, R14.27, R14.28, R14.29, R14.30, R14.31, R14.33, R14.37, R12.38_
     - Design: §Observability
   - [ ]* 15.4 Write property test for log-entry totality and redaction
@@ -292,21 +292,21 @@ Tasks marked `*` are optional test sub-tasks that may be skipped for a faster MV
     - _Requirements: R16.32, R17.1, R17.2, R17.3, R17.4, R17.5, R17.6, R17.7, R17.8, R17.9, R17.10, R17.11, R17.12, R17.13, R17.14, R17.15, R17.16, R17.17_
     - Design: §Correctness Properties, §Global policies
 
-- [ ] 18. Packaging, container assets and quality gates (M-15)
-  - [ ] 18.1 Modify `build.sh`: replace `zip -r "$ZIP_PATH" src/*.py` with a full `src` tree zip excluding caches, add the post-zip artifact import check (`importlib.import_module("src.main")`, assert `handler` callable), and add the uncompressed/compressed artifact-size gate (250 MB / 50 MB)
+- [x] 18. Packaging, container assets and quality gates (M-15)
+  - [x] 18.1 Modify `build.sh`: replace `zip -r "$ZIP_PATH" src/*.py` with a full `src` tree zip excluding caches, add the post-zip artifact import check (`importlib.import_module("src.main")`, assert `handler` callable), and add the uncompressed/compressed artifact-size gate (250 MB / 50 MB)
     - _Requirements: R15.13, R15.34, R15.39, R15.40_
     - Design: §`build.sh` — concrete change
-  - [ ] 18.2 Create `Dockerfile` (`python:3.13-slim`, `uv sync --locked --no-dev`, non-root uid, `EXPOSE ${KOGNIT_LLM_PORT}`, `CMD uvicorn`, `HEALTHCHECK` against `GET /health`, no secret in any layer); conditional per OQ-18 but required by R15.8–R15.11, R15.28–R15.29
+  - [x] 18.2 Create `Dockerfile` (`python:3.13-slim`, `uv sync --locked --no-dev`, non-root uid, `EXPOSE ${KOGNIT_LLM_PORT}`, `CMD uvicorn`, `HEALTHCHECK` against `GET /health`, no secret in any layer); conditional per OQ-18 but required by R15.8–R15.11, R15.28–R15.29
     - _Requirements: R15.8, R15.28, R15.29_
     - Design: §Container assets
-  - [ ] 18.3 Create `compose.yaml` supplying every R15 variable as an environment variable with no inline secret, `KOGNIT_LLM_MODEL_PROVIDER=stub` so both routes serve with no AWS reachability, and the optional PostgreSQL service documented as an excluded local fixture; conditional per OQ-18 but required by R15.9–R15.11, R15.30
+  - [x] 18.3 Create `compose.yaml` supplying every R15 variable as an environment variable with no inline secret, `KOGNIT_LLM_MODEL_PROVIDER=stub` so both routes serve with no AWS reachability, and the optional PostgreSQL service documented as an excluded local fixture; conditional per OQ-18 but required by R15.9–R15.11, R15.30
     - _Requirements: R15.9, R15.10, R15.11, R15.30_
     - Design: §Container assets
   - [ ]* 18.4 Add the per-module coverage assertion step (≥95% lines / ≥90% branches for Scope_Guard, Query_Firewall, Query_Executor, Conversation_Store, Config_Loader, Request_Logger) and confirm the overall ≥80% gate emits the SonarQube XML
     - _Requirements: R17.51, R17.52_
     - Design: §Global policies (Coverage)
 
-- [ ] 19. Final checkpoint - Ensure all tests pass
+- [x] 19. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
