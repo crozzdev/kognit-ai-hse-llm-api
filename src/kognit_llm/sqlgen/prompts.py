@@ -39,5 +39,7 @@ date_trunc('week', dim_date.date); there is no week column.
 action_count > 0.
 - GROUP BY every non-aggregated selected column. Use an inclusive date range.
 
-Return only the statement and its ordered parameter list.\
+Return the statement and its ordered parameter list as the JSON object only: no \
+explanation, no reasoning, no markdown, no code fences, no text before or after \
+the object.\
 """

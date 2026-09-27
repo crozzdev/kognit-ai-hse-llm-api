@@ -292,16 +292,16 @@ Tasks marked `*` are optional test sub-tasks that may be skipped for a faster MV
     - _Requirements: R16.32, R17.1, R17.2, R17.3, R17.4, R17.5, R17.6, R17.7, R17.8, R17.9, R17.10, R17.11, R17.12, R17.13, R17.14, R17.15, R17.16, R17.17_
     - Design: §Correctness Properties, §Global policies
 
-- [x] 18. Packaging, container assets and quality gates (M-15)
-  - [x] 18.1 Modify `build.sh`: replace `zip -r "$ZIP_PATH" src/*.py` with a full `src` tree zip excluding caches, add the post-zip artifact import check (`importlib.import_module("src.main")`, assert `handler` callable), and add the uncompressed/compressed artifact-size gate (250 MB / 50 MB)
+- [x] 18. Packaging and quality gates (M-15)
+  - [x] 18.1 Modify `build.sh`: replace `zip -r "$ZIP_PATH" src/*.py` with a full `src` tree zip excluding caches (this service uses the `src/kognit_llm/` package, so `src/*.py` alone would leave it out). Aligned with the shared Lambda+zip build pattern of the other services (statistics/ml/etl) — no import-check or size-gate step is added, to keep the build identical in shape to the rest.
     - _Requirements: R15.13, R15.34, R15.39, R15.40_
     - Design: §`build.sh` — concrete change
-  - [x] 18.2 Create `Dockerfile` (`python:3.13-slim`, `uv sync --locked --no-dev`, non-root uid, `EXPOSE ${KOGNIT_LLM_PORT}`, `CMD uvicorn`, `HEALTHCHECK` against `GET /health`, no secret in any layer); conditional per OQ-18 but required by R15.8–R15.11, R15.28–R15.29
-    - _Requirements: R15.8, R15.28, R15.29_
-    - Design: §Container assets
-  - [x] 18.3 Create `compose.yaml` supplying every R15 variable as an environment variable with no inline secret, `KOGNIT_LLM_MODEL_PROVIDER=stub` so both routes serve with no AWS reachability, and the optional PostgreSQL service documented as an excluded local fixture; conditional per OQ-18 but required by R15.9–R15.11, R15.30
-    - _Requirements: R15.9, R15.10, R15.11, R15.30_
-    - Design: §Container assets
+  - [~] 18.2 ~~Create `Dockerfile`~~ — NOT APPLICABLE per OQ-18. The service deploys to AWS Lambda via `build.sh` → `.zip` → GitHub Actions (`cd.yml` → `aws lambda update-function-code`), matching every other service in this repo. No containers are used. Dockerfile removed; this does not affect `src/`, CI, or CD.
+    - _Requirements: R15.8, R15.28, R15.29 (superseded by OQ-18)_
+    - Design: §Container assets (discarded per OQ-18)
+  - [~] 18.3 ~~Create `compose.yaml`~~ — NOT APPLICABLE per OQ-18. No local container stack is used; local runs use `uvicorn` directly with `PYTHONPATH=src`. compose.yaml removed; this does not affect `src/`, CI, or CD.
+    - _Requirements: R15.9, R15.10, R15.11, R15.30 (superseded by OQ-18)_
+    - Design: §Container assets (discarded per OQ-18)
   - [ ]* 18.4 Add the per-module coverage assertion step (≥95% lines / ≥90% branches for Scope_Guard, Query_Firewall, Query_Executor, Conversation_Store, Config_Loader, Request_Logger) and confirm the overall ≥80% gate emits the SonarQube XML
     - _Requirements: R17.51, R17.52_
     - Design: §Global policies (Coverage)

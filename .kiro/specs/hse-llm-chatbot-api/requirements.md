@@ -100,7 +100,7 @@ Where a capability could not be verified against the authoritative warehouse sch
 9. One structured log entry per request describing the outcome.
 10. A model-provider abstraction with a configurable model and no hard-coded provider.
 11. Environment-based configuration resolved through UV-managed dependencies and SSM references.
-12. Docker-based local execution instructions for the service.
+12. Local execution instructions for the service _(via `uvicorn`; the original Docker-based instructions were removed per OQ-18)_.
 13. Automated tests meeting the Definition of Done coverage threshold, executable without a live model provider or live warehouse.
 
 ### Out of Scope
@@ -804,7 +804,7 @@ Provenance: [User-directed]; [New proposed requirement] relative to the Epic 04 
 
 ### Requirement 15: Configuration, Packaging and Local Execution
 
-**User Story:** As a Developer, I want the service configurable by environment and runnable locally in Docker, so that I can develop and verify behaviour without AWS access.
+**User Story:** As a Developer, I want the service configurable by environment and runnable locally, so that I can develop and verify behaviour without AWS access. _(Originally specified Docker-based local execution; superseded by OQ-18 — local runs use `uvicorn` directly, matching the container-free Lambda+zip deployment used by every service in this repo.)_
 
 Provenance: [Repo-confirmed] current UV, Ruff, `build.sh` and Lambda setup; [Notion-confirmed: CI/CD Pipelines] for the pipeline steps; the Docker requirement is [User-directed] [New proposed requirement]; see §Risks R-6, R-13 and §Open Questions OQ-17, OQ-18, OQ-21.
 
@@ -886,9 +886,9 @@ Every variable carries the prefix `KOGNIT_LLM_`. "Required" means startup valida
 5. THE LLM_API SHALL pass `ty check` at Ty version `0.0.29` with zero reported violations.
 6. THE Config_Loader SHALL read every variable named in the Configuration Variables table from environment variables and SHALL apply the tabled default value when an optional variable is absent.
 7. THE Config_Loader SHALL validate every variable named in the Configuration Variables table through exactly one Pydantic settings model, and SHALL construct that model exactly once per execution environment.
-8. THE LLM_API SHALL provide a Dockerfile that builds an image based on a Python `3.13` runtime, exposes the port given by `KOGNIT_LLM_PORT`, and runs the service process as a non-root user whose user identifier is not `0`.
-9. THE LLM_API SHALL provide a Docker Compose definition that supplies every variable named in the Configuration Variables table to the service container through environment variables and declares no secret value inline.
-10. WHEN the service runs from the Docker image with `KOGNIT_LLM_MODEL_PROVIDER` set to `stub` and the remaining required variables set, THE LLM_API SHALL serve the `POST /chat/message` route and the `GET /health` route on the port given by `KOGNIT_LLM_PORT`.
+8. ~~THE LLM_API SHALL provide a Dockerfile that builds an image based on a Python `3.13` runtime, exposes the port given by `KOGNIT_LLM_PORT`, and runs the service process as a non-root user whose user identifier is not `0`.~~ **NOT APPLICABLE — superseded by OQ-18.** The service deploys to AWS Lambda via `build.sh` → `.zip` → GitHub Actions, matching every other service in this repo. No container image is built or used.
+9. ~~THE LLM_API SHALL provide a Docker Compose definition that supplies every variable named in the Configuration Variables table to the service container through environment variables and declares no secret value inline.~~ **NOT APPLICABLE — superseded by OQ-18.** No local container stack is used; local runs invoke `uvicorn` directly with `PYTHONPATH=src`.
+10. ~~WHEN the service runs from the Docker image with `KOGNIT_LLM_MODEL_PROVIDER` set to `stub` and the remaining required variables set, THE LLM_API SHALL serve the `POST /chat/message` route and the `GET /health` route on the port given by `KOGNIT_LLM_PORT`.~~ **NOT APPLICABLE — superseded by OQ-18.** The equivalent local guarantee is met by running `uvicorn` directly (no Docker image); see AC 31.
 11. THE LLM_API SHALL document in the repository README every variable named in the Configuration Variables table together with its type, its required condition and its default value.
 12. THE LLM_API SHALL produce a deployment artifact whose installed distribution set equals the non-development distribution set resolved by `uv.lock`, including every distribution required by the LangGraph workflow and the Model_Provider_Adapter.
 13. THE LLM_API SHALL produce a deployment artifact whose uncompressed size is at most `250` megabytes and whose compressed archive size is at most `50` megabytes.
@@ -906,14 +906,14 @@ Every variable carries the prefix `KOGNIT_LLM_`. "Required" means startup valida
 25. THE Config_Loader SHALL support construction of its settings model from an explicit key-value mapping supplied by the caller, without AWS credentials and without network access.
 26. WHEN the test suite runs with no AWS credentials present in the environment, THE LLM_API SHALL import every application module and THE Config_Loader SHALL construct a valid configuration.
 27. THE LLM_API SHALL resolve its configuration module through an import path that succeeds both when the package root is the repository root and when the package root is the `src` directory, matching the `pythonpath` entries `.` and `src` declared in `pyproject.toml`.
-28. THE LLM_API SHALL build a Docker image that contains no secret value, no `.env` file and no credential file.
-29. THE LLM_API SHALL declare a container health check that calls the `GET /health` route with an interval of `30` seconds, a timeout of `5` seconds, a start period of `10` seconds and a retry count of `3`.
-30. WHERE the Docker Compose definition starts a PostgreSQL container, THE LLM_API SHALL document that container as a local development fixture that contains no warehouse data, and SHALL exclude it from the CI test run and from every deployed environment.
+28. ~~THE LLM_API SHALL build a Docker image that contains no secret value, no `.env` file and no credential file.~~ **NOT APPLICABLE — superseded by OQ-18.** No Docker image is built. The equivalent guarantee applies to the `.zip` deployment artifact, which contains no secret, `.env` or credential file (AC 1, AC 2).
+29. ~~THE LLM_API SHALL declare a container health check that calls the `GET /health` route with an interval of `30` seconds, a timeout of `5` seconds, a start period of `10` seconds and a retry count of `3`.~~ **NOT APPLICABLE — superseded by OQ-18.** No container health check; Lambda health is verified by the CD integration test that invokes `GET /health` (AC 15).
+30. ~~WHERE the Docker Compose definition starts a PostgreSQL container, THE LLM_API SHALL document that container as a local development fixture that contains no warehouse data, and SHALL exclude it from the CI test run and from every deployed environment.~~ **NOT APPLICABLE — superseded by OQ-18.** No Docker Compose definition exists.
 31. WHEN the service starts with `KOGNIT_LLM_ENVIRONMENT` set to `local`, `KOGNIT_LLM_MODEL_PROVIDER` set to `stub`, and no reachable AWS SSM Parameter Store, THE LLM_API SHALL respond to `GET /health` with HTTP status `200`, a warehouse status value and a model-provider status value, and SHALL NOT terminate the service process.
 32. THE LLM_API SHALL derive the dependency set installed into the deployment artifact from the committed `uv.lock` file, and SHALL fail the build when the lock file is not in sync with `pyproject.toml`.
 33. THE LLM_API SHALL install every native-extension dependency, including `psycopg[binary,pool]`, for the AWS Lambda target platform `x86_64-manylinux2014` and for Python `3.13`, and SHALL NOT install a distribution built for the build runner platform when that platform differs from the target platform.
 34. IF the uncompressed artifact size exceeds `250` megabytes or the compressed archive size exceeds `50` megabytes, THEN the build SHALL fail with a message stating the measured size and the exceeded limit.
-35. THE LLM_API SHALL document a fallback packaging path of a container image or a Lambda layer, to be applied when the artifact exceeds either limit stated in AC 13.
+35. THE LLM_API SHALL document a fallback packaging path of a Lambda layer, to be applied when the artifact exceeds either limit stated in AC 13. _(The container-image fallback originally listed here is removed per OQ-18; the service uses no containers.)_
 36. THE LLM_API SHALL set the FastAPI application root path to `/llm` and the Mangum API Gateway base path to `/llm`, so that an API Gateway request path of `/llm/chat/message` reaches the application route `/chat/message`.
 37. THE LLM_API SHALL serve the health route for an API Gateway payload whose `rawPath` is `/health` and for an API Gateway payload whose `rawPath` is `/llm/health`, responding with `statusCode` equal to `200` in both cases.
 38. THE LLM_API SHALL install dependencies in the CI pipeline and in the CD pipeline from the same committed `uv.lock` file, and SHALL resolve no dependency version outside that lock file during either pipeline.
@@ -962,7 +962,7 @@ Provenance: [Notion-confirmed: Project Description §9 Definition of Done, §CI/
 32. THE test suite SHALL execute each correctness property of Requirement 17 with at least `100` generated examples.
 33. THE LLM_API SHALL confine model-provider client imports to the Model_Provider_Adapter module and warehouse driver imports to the Query_Executor module, so that the Query_Firewall module imports neither a model-provider client nor a warehouse driver and no module of the agent layer executes a SQL statement.
 34. THE LLM_API SHALL limit each component module named in the Glossary section "System Names" to at most `7` public names in its module interface.
-35. WHERE THE LLM_API runs on Linux under Python `3.13`, THE LLM_API SHALL produce identical response bodies, excluding the `request_id` and generated `conversation_id` values, for identical request bodies, identical configuration and identical stub dependencies, whether it runs as the AWS Lambda function or from the Docker image.
+35. WHERE THE LLM_API runs on Linux under Python `3.13`, THE LLM_API SHALL produce identical response bodies, excluding the `request_id` and generated `conversation_id` values, for identical request bodies, identical configuration and identical stub dependencies, whether it runs as the AWS Lambda function or from a local `uvicorn` process. _(Originally referenced the Docker image; updated per OQ-18.)_
 36. WHEN THE LLM_API compares a user-supplied dimension value with a value present in the corresponding warehouse dimension, THE LLM_API SHALL apply a comparison that is insensitive to letter case and to diacritic marks.
 
 ### Requirement 17: Testing
@@ -1074,7 +1074,7 @@ These requirements have no corresponding Notion backlog item and require Product
 | Requirement 11 | Model-provider abstraction with configurable provider and model |
 | Requirement 12 | Conversation memory, isolation, TTL and eviction |
 | Requirement 14 | Per-request logging with a bounded error-category set and log redaction rules |
-| Requirement 15 (partly) | Docker-based local execution |
+| Requirement 15 (partly) | ~~Docker-based local execution~~ — removed per OQ-18; local execution uses `uvicorn` directly |
 | Requirement 17 | Deterministic stub provider and stub warehouse; Hypothesis correctness properties |
 
 ## Assumptions and Recorded Decisions

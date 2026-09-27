@@ -61,7 +61,11 @@ def make_answer_synthesis(deps: NodeDeps):
                 return None
             request = CompletionRequest[_DraftOut](
                 call_type="answer",
-                system_instruction="Answer the HSE analytics question faithfully.",
+                system_instruction=(
+                    "Answer the HSE analytics question faithfully. Respond with the "
+                    "JSON object only: no explanation, no reasoning, no markdown, no "
+                    "code fences, no text before or after the object."
+                ),
                 messages=(Message(role="user", content=state.raw_message),),
                 output_model=_DraftOut,
                 temperature=deps.settings.model_temperature,

@@ -20,7 +20,9 @@ __all__ = ["make_scope_validation"]
 
 _SYSTEM = (
     "Classify the user message for an HSE analytics assistant. Reply with a JSON "
-    "object {\"decision\": one of IN_SCOPE, OUT_OF_SCOPE, UNSAFE}."
+    'object {"decision": one of IN_SCOPE, OUT_OF_SCOPE, UNSAFE}. '
+    "Respond with the JSON object only: no explanation, no reasoning, no markdown, "
+    "no code fences, no text before or after the object."
 )
 
 

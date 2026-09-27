@@ -27,7 +27,9 @@ _SYSTEM = (
     "intent (DATA_QUERY | GENERAL_CHAT | CLARIFICATION_NEEDED), an optional "
     "measure, an optional classified date_expression, grouping_terms, "
     "filter_terms, ordering, requested_limit, a confidence 0..1, and an optional "
-    "clarification_reason. Never compute dates or resolve values yourself."
+    "clarification_reason. Never compute dates or resolve values yourself. "
+    "Respond with the JSON object only: no explanation, no reasoning, no markdown, "
+    "no code fences, no text before or after the object."
 )
 
 

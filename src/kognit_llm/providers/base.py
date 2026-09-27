@@ -40,6 +40,42 @@ _RETRY_BASE_DELAYS_MS = (500, 1000)
 _RETRY_JITTER_MS = 250
 
 
+def _extract_first_json_object(text: str) -> str | None:
+    """Return the first balanced top-level JSON object substring, or ``None``.
+
+    Scans for the first ``{`` and walks forward tracking brace depth, ignoring
+    braces that appear inside string literals and honouring backslash escapes,
+    so a model reply that wraps a valid object in surrounding prose or markdown
+    (``{"decision":"IN_SCOPE"}\\n\\n**Reasoning:** ...``) still yields the object.
+    Returns ``None`` when no ``{`` is present or the braces never balance.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return None
+
+
 class Message(BaseModel):
     """One conversation message. User text never enters the system instruction."""
 
@@ -213,9 +249,23 @@ class ProviderBase(ABC):
     def _parse[T: BaseModel](
         self, request: CompletionRequest[T], raw: RawCompletion
     ) -> CompletionResult[T] | None:
-        try:
-            output = request.output_model.model_validate_json(raw.text)
-        except ValidationError:
+        """Validate the raw text into the target model, or return ``None``.
+
+        Some providers return a valid JSON object followed by prose or markdown
+        (for example ``{"decision":"IN_SCOPE"}\\n\\n**Reasoning:** ...``). Strict
+        whole-string JSON validation rejects that even though the leading object
+        is well formed, which drives the caller to a repair attempt and, for the
+        scope guard, to a fail-closed rejection. We therefore validate the raw
+        text first and, on failure, retry once against the first balanced JSON
+        object extracted from the text. If neither validates we return ``None``,
+        preserving the existing fail-closed contract (R11.16-R11.17).
+        """
+        output = self._validate_output(request, raw.text)
+        if output is None:
+            candidate = _extract_first_json_object(raw.text)
+            if candidate is not None and candidate != raw.text:
+                output = self._validate_output(request, candidate)
+        if output is None:
             return None
         return CompletionResult(
             output=output,
@@ -224,5 +274,14 @@ class ProviderBase(ABC):
             finish_reason=raw.finish_reason,
             provider_request_id=raw.provider_request_id,
         )
+
+    @staticmethod
+    def _validate_output[T: BaseModel](
+        request: CompletionRequest[T], text: str
+    ) -> T | None:
+        try:
+            return request.output_model.model_validate_json(text)
+        except ValidationError:
+            return None
 
 
