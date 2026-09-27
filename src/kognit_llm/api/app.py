@@ -11,6 +11,7 @@ The chat route ``POST /chat/message`` is registered by the LangGraph milestone
 """
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, Request
@@ -72,9 +73,54 @@ def create_app(settings: "Settings") -> FastAPI:
     )
 
     app.include_router(build_health_router(settings))
+    app.include_router(_build_chat_router(settings))
 
     _register_exception_handlers(app)
     return app
+
+
+def _build_chat_router(settings: "Settings"):
+    """Assemble node dependencies, compile the graph, and build the chat router."""
+    from kognit_llm.agent.graph import build_graph
+    from kognit_llm.agent.nodes.deps import NodeDeps
+    from kognit_llm.api.routes_chat import build_chat_router
+    from kognit_llm.config.secrets import SecretResolver
+    from kognit_llm.data.executor import WarehouseExecutor
+    from kognit_llm.data.pool import build_pool
+    from kognit_llm.memory.in_memory import InMemoryConversationStore
+    from kognit_llm.providers.factory import build_provider
+    from kognit_llm.schema.allowlist import load_allowlist
+
+    resolver = SecretResolver(settings=settings)
+    provider = build_provider(settings, resolver)
+    store = InMemoryConversationStore(
+        turn_max=settings.conversation_turn_max,
+        conversation_max=settings.conversation_max,
+        ttl_seconds=settings.conversation_ttl_seconds,
+        char_budget=settings.conversation_char_budget,
+        clock=lambda: _utcnow(),
+    )
+    # The pool opens on first warehouse use, so building it needs no live DB.
+    pool = build_pool(settings, resolver.database())
+    executor = WarehouseExecutor(
+        pool,
+        row_cap=settings.row_cap,
+        max_result_columns=settings.max_result_columns,
+        max_result_bytes=settings.max_result_bytes,
+    )
+    deps = NodeDeps(
+        settings=settings,
+        provider=provider,
+        executor=executor,
+        store=store,
+        allowlist=load_allowlist(),
+    )
+    graph = build_graph(deps)
+    return build_chat_router(settings, deps, graph)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 def _register_exception_handlers(app: FastAPI) -> None:

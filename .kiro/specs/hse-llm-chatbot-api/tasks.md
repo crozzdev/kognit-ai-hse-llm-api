@@ -228,23 +228,23 @@ Tasks marked `*` are optional test sub-tasks that may be skipped for a faster MV
   - [ ]* 12.5 Write unit tests against `FrozenClock`: unknown id returns empty, 11 turns under cap 10, 101 conversations under cap 100, TTL expiry, and concurrent same-conversation appends serialized
     - _Requirements: R12.9, R12.12, R12.14, R12.35_
 
-- [ ] 13. LangGraph state, guard and graph assembly (M-13)
-  - [ ] 13.1 Implement `agent/state.py` `TurnState` (exactly the 20 R10.18 fields, `extra="forbid"`), `TurnOutcome` (12 values), `ErrorCategory` (8 values), `NODE_WRITES` map and `WRITE_ONCE` set
+- [x] 13. LangGraph state, guard and graph assembly (M-13)
+  - [x] 13.1 Implement `agent/state.py` `TurnState` (exactly the 20 R10.18 fields, `extra="forbid"`), `TurnOutcome` (12 values), `ErrorCategory` (8 values), `NODE_WRITES` map and `WRITE_ONCE` set
     - _Requirements: R10.12, R10.18, R10.19, R10.33, R14.11_
     - Design: §Graph state
-  - [ ] 13.2 Implement `agent/telemetry.py` `TurnTelemetry` side-channel (stage_ms, token counts, provider calls, connection-acquisition ms, truncated, cold_start) kept outside `TurnState`
+  - [x] 13.2 Implement `agent/telemetry.py` `TurnTelemetry` side-channel (stage_ms, token counts, provider calls, connection-acquisition ms, truncated, cold_start) kept outside `TurnState`
     - _Requirements: R10.18, R14.23, R14.24, R14.25, R16.17_
     - Design: §Key Design Decisions (D10)
-  - [ ] 13.3 Implement `agent/guard.py` node wrapper enforcing entry/exit state validation, `allowed_writes` subset, write-once on `scope_decision`/`turn_outcome`, and routing out-of-map or wrong-node writes to `terminal_error` with `INTERNAL_ERROR`; record per-stage timing into telemetry
+  - [x] 13.3 Implement `agent/guard.py` node wrapper enforcing entry/exit state validation, `allowed_writes` subset, write-once on `scope_decision`/`turn_outcome`, and routing out-of-map or wrong-node writes to `terminal_error` with `INTERNAL_ERROR`; record per-stage timing into telemetry
     - _Requirements: R10.19, R10.20, R10.21, R10.22, R10.32, R16.16, R16.17_
     - Design: §Node contract table
-  - [ ] 13.4 Implement the nine node modules under `agent/nodes/` (scope_validation, intent_classification, schema_context_selection, query_generation, query_validation, query_execution, answer_synthesis, conversation_context_update, terminal_error) each depending only on component interfaces
+  - [x] 13.4 Implement the nine node modules under `agent/nodes/` (scope_validation, intent_classification, schema_context_selection, query_generation, query_validation, query_execution, answer_synthesis, conversation_context_update, terminal_error) each depending only on component interfaces
     - _Requirements: R2.1, R2.2, R2.3, R2.14, R3.2, R3.3, R3.12, R5.7, R7.1, R9.30_
     - Design: §Node contract table
-  - [ ] 13.5 Implement `agent/graph.py` `build_graph(deps)` compiling the `StateGraph` from the module-level `PERMITTED_EDGES` frozenset, with the single regeneration cycle, per-turn model-call maximum, per-turn token ceiling, turn timeout with in-flight statement cancellation, and provider-attempt abandonment when `elapsed + provider_timeout > turn_timeout`
+  - [x] 13.5 Implement `agent/graph.py` `build_graph(deps)` compiling the `StateGraph` from the module-level `PERMITTED_EDGES` frozenset, with the single regeneration cycle, per-turn model-call maximum, per-turn token ceiling, turn timeout with in-flight statement cancellation, and provider-attempt abandonment when `elapsed + provider_timeout > turn_timeout`
     - _Requirements: R10.1, R10.2, R10.3, R10.4, R10.5, R10.6, R10.7, R10.9, R10.10, R10.11, R10.13, R10.14, R10.15, R10.16, R10.17, R10.23, R10.29, R16.19_
     - Design: §LangGraph Workflow
-  - [ ] 13.6 Implement `api/routes_chat.py` `POST /chat/message`: seed `TurnState`, fetch context via `Conversation_Store`, invoke the graph, map `TurnState` to `ChatResponse` (single complete verified JSON body), and surface the error matrix statuses
+  - [x] 13.6 Implement `api/routes_chat.py` `POST /chat/message`: seed `TurnState`, fetch context via `Conversation_Store`, invoke the graph, map `TurnState` to `ChatResponse` (single complete verified JSON body), and surface the error matrix statuses
     - _Requirements: R1.6, R1.9, R1.10, R1.11, R1.12, R2.11, R3.4, R3.7, R5.8, R6.17_
     - Design: §Request path, §Successful DATA_QUERY turn
   - [ ]* 13.7 Write property test for scope-guard ordering invariant
