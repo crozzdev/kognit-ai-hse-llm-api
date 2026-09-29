@@ -39,7 +39,25 @@ date_trunc('week', dim_date.date); there is no week column.
 action_count > 0.
 - GROUP BY every non-aggregated selected column. Use an inclusive date range.
 
-Return the statement and its ordered parameter list as the JSON object only: no \
-explanation, no reasoning, no markdown, no code fences, no text before or after \
-the object.\
+Respond with a JSON object containing EXACTLY these four fields, using these \
+EXACT names (do not use "sql" or any other name):
+- "statement": string. The single SELECT statement, with %s placeholders for \
+every parameter.
+- "referenced_tables": array of strings. Every table the statement reads, \
+without the schema prefix (e.g. "fact_incidents", "dim_date").
+- "referenced_columns": array of strings. Every column the statement reads, \
+qualified as "table.column" (e.g. "fact_incidents.record_no", "dim_date.date").
+- "params": array. The ordered parameter values, one per %s placeholder, as \
+strings/numbers.
+
+Respond with the JSON object only: no explanation, no reasoning, no markdown, no \
+code fences, no text before or after the object.
+
+Example response:
+{"statement": "SELECT COUNT(DISTINCT fact_incidents.record_no) AS incident_count \
+FROM fact_incidents JOIN dim_date ON dim_date.sk_date = fact_incidents.sk_date \
+WHERE dim_date.date BETWEEN %s AND %s LIMIT 1000", "referenced_tables": \
+["fact_incidents", "dim_date"], "referenced_columns": \
+["fact_incidents.record_no", "fact_incidents.sk_date", "dim_date.sk_date", \
+"dim_date.date"], "params": ["2025-01-01", "2025-12-31"]}\
 """

@@ -165,6 +165,12 @@ def _route_after_schema(state: TurnState) -> str:
 
 
 def _route_after_validation(state: TurnState) -> str:
+    # An internal error in query_generation or query_validation (e.g. a provider
+    # failure that left no generated_sql) terminates the turn; it must never loop
+    # back into regeneration, which would spin forever with no REJECT verdict to
+    # advance regeneration_count.
+    if state.error_category is not None:
+        return "terminal_error"
     verdict = state.firewall_verdict
     if verdict is not None and verdict.verdict == "ADMIT":
         return "query_execution"
