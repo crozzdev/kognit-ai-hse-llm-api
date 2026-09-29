@@ -84,6 +84,10 @@ class WarehouseExecutor:
 
         started = time.monotonic()
         try:
+            # Lazy-open on first use: the pool is built with open=False so importing
+            # performs no connection (R16.21-R16.22); open() is idempotent, so this
+            # opens it once per execution environment and is a no-op thereafter.
+            self._pool.open()
             with self._pool.connection() as conn, conn.transaction():
                 with conn.cursor() as cur:
                     # The statement is firewall-validated and hash-bound above,

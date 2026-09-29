@@ -45,6 +45,7 @@ class WarehouseStatus:
 def probe_warehouse(pool: ConnectionPool) -> WarehouseStatus:
     """Check warehouse liveness with Q1, never raising (R7.10, R16.25)."""
     try:
+        pool.open()  # idempotent lazy-open; the pool is built with open=False
         with pool.connection() as conn, conn.cursor() as cur:
             cur.execute(Q1_LIVENESS)
             cur.fetchone()
@@ -64,6 +65,7 @@ def probe_privileges(
     connection detail.
     """
     try:
+        pool.open()  # idempotent lazy-open; the pool is built with open=False
         with pool.connection() as conn, conn.cursor() as cur:
             cur.execute(
                 Q3_PRIVILEGE_VERIFICATION, (approved_schema, list(relations))
