@@ -95,6 +95,11 @@ class Settings(BaseSettings):
     model_endpoint: str | None = None
     model_credential_param: str | None = None
     model_api_key: str | None = None
+    # Optional explicit AWS credentials for Bedrock. When set (e.g. a cross-account
+    # key resolved from SSM in Lambda), the Bedrock client uses them instead of the
+    # ambient role/profile; when absent, boto3's default credential chain applies.
+    bedrock_access_key_id: str | None = None
+    bedrock_secret_access_key: str | None = None
     model_timeout_ms: Annotated[int, Field(ge=1000, le=60000)] = 15000
     model_temperature: Annotated[float, Field(ge=0.0, le=2.0)] = 0.0
     model_max_output_tokens: Annotated[int, Field(ge=256, le=8192)] = 1024

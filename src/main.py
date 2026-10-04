@@ -30,6 +30,11 @@ _SSM_ENV_MAP = {
     "/kognit/llm/PROVIDER": "KOGNIT_LLM_MODEL_PROVIDER",
     "/kognit/llm/MODEL_ID": "KOGNIT_LLM_MODEL_ID",
     "/kognit/llm/REGION": "KOGNIT_LLM_AWS_REGION",
+    # Cross-account Bedrock credentials: Bedrock is enabled only in the personal
+    # account, while this Lambda runs in another account. These SecureString keys
+    # let the Bedrock client authenticate against the account that owns the model.
+    "/kognit/llm/AWS_ACCESS_KEY_ID": "KOGNIT_LLM_BEDROCK_ACCESS_KEY_ID",
+    "/kognit/llm/AWS_SECRET_ACCESS_KEY": "KOGNIT_LLM_BEDROCK_SECRET_ACCESS_KEY",
     "/kognit/db/POSTGRES_HOST": "KOGNIT_LLM_DB_HOST",
     "/kognit/db/POSTGRES_DB": "KOGNIT_LLM_DB_NAME",
     "/kognit/db/POSTGRES_PORT": "KOGNIT_LLM_DB_PORT",

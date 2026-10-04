@@ -53,9 +53,22 @@ class BedrockProvider(ProviderBase):
         if self._client is None:
             import boto3
 
-            self._client = boto3.client(
-                "bedrock-runtime", region_name=self._settings.aws_region
-            )
+            # Explicit credentials (e.g. a cross-account key from SSM) take
+            # precedence; otherwise boto3's default chain (Lambda role / local
+            # profile) is used. Both keys must be present to switch.
+            access_key = self._settings.bedrock_access_key_id
+            secret_key = self._settings.bedrock_secret_access_key
+            if access_key and secret_key:
+                self._client = boto3.client(
+                    "bedrock-runtime",
+                    region_name=self._settings.aws_region,
+                    aws_access_key_id=access_key,
+                    aws_secret_access_key=secret_key,
+                )
+            else:
+                self._client = boto3.client(
+                    "bedrock-runtime", region_name=self._settings.aws_region
+                )
         return self._client
 
     def _refresh_credential(self) -> None:
