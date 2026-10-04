@@ -22,12 +22,19 @@ from kognit_llm.config.settings import get_settings  # noqa: E402
 
 # SSM parameter name -> KOGNIT_LLM_* environment variable, resolved at cold start
 # when running in Lambda (the same pattern the other services use for their
-# config). These three values are non-secret (a provider name, a model ARN and a
-# region); the actual Bedrock credential comes from the Lambda execution role.
+# config). The model values are non-secret (a provider name, a model ARN and a
+# region); the Bedrock credential itself comes from the Lambda execution role.
+# The warehouse values reuse the shared /kognit/db/POSTGRES_* parameters that the
+# statistics service also reads, so the LLM connects to the same warehouse.
 _SSM_ENV_MAP = {
     "/kognit/llm/PROVIDER": "KOGNIT_LLM_MODEL_PROVIDER",
     "/kognit/llm/MODEL_ID": "KOGNIT_LLM_MODEL_ID",
     "/kognit/llm/REGION": "KOGNIT_LLM_AWS_REGION",
+    "/kognit/db/POSTGRES_HOST": "KOGNIT_LLM_DB_HOST",
+    "/kognit/db/POSTGRES_DB": "KOGNIT_LLM_DB_NAME",
+    "/kognit/db/POSTGRES_PORT": "KOGNIT_LLM_DB_PORT",
+    "/kognit/db/POSTGRES_USER": "KOGNIT_LLM_DB_USER",
+    "/kognit/db/POSTGRES_PASSWORD": "KOGNIT_LLM_DB_PASSWORD",
 }
 
 
@@ -63,6 +70,9 @@ def _load_config_from_ssm() -> None:
     except Exception:
         # boto3 unavailable or client build failed: leave the environment as-is.
         return
+    # The shared warehouse is reached the same way the statistics service reaches
+    # it (no enforced TLS); default the LLM's sslmode to match unless overridden.
+    os.environ.setdefault("KOGNIT_LLM_DB_SSLMODE", "disable")
 
 
 _load_config_from_ssm()
