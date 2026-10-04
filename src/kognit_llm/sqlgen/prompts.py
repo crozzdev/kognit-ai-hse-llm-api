@@ -19,6 +19,14 @@ Hard rules (a violation is rejected before execution):
 UPDATE, DELETE, MERGE, DDL, or multiple statements.
 - Reference only the tables and columns given in the schema context. Qualify \
 every column with its table.
+- Use ONLY column names that appear VERBATIM in the schema context. Never \
+guess, abbreviate, singularize or invent a column name. If you intend to filter \
+or group by a dimension attribute, copy the exact column name from the schema \
+context for that table (for example a shift is filtered by `dim_shift.shift_name`, \
+not `dim_shift.shift`; a plant by `dim_location.plant`; a status by \
+`dim_status.status`; an incident category by `dim_incident_type.category`). When \
+no listed column matches what the question asks for, omit that filter rather than \
+inventing a column.
 - Every user-supplied comparison value MUST be a %s placeholder with a matching \
 parameter, never an inline literal.
 - Always include a LIMIT that is an integer literal at or below the row cap.
