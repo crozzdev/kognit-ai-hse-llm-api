@@ -20,5 +20,52 @@ from mangum import Mangum  # noqa: E402  (import after the sys.path bootstrap)
 from kognit_llm.api.app import create_app  # noqa: E402
 from kognit_llm.config.settings import get_settings  # noqa: E402
 
+# SSM parameter name -> KOGNIT_LLM_* environment variable, resolved at cold start
+# when running in Lambda (the same pattern the other services use for their
+# config). These three values are non-secret (a provider name, a model ARN and a
+# region); the actual Bedrock credential comes from the Lambda execution role.
+_SSM_ENV_MAP = {
+    "/kognit/llm/PROVIDER": "KOGNIT_LLM_MODEL_PROVIDER",
+    "/kognit/llm/MODEL_ID": "KOGNIT_LLM_MODEL_ID",
+    "/kognit/llm/REGION": "KOGNIT_LLM_AWS_REGION",
+}
+
+
+def _load_config_from_ssm() -> None:
+    """Populate KOGNIT_LLM_* env vars from SSM when running in Lambda.
+
+    Runs only inside the Lambda runtime (detected via ``AWS_LAMBDA_FUNCTION_NAME``),
+    so local and CI runs read configuration from the environment exactly as before
+    (R15.16). It never overwrites a value already set in the environment, and a
+    missing parameter or an SSM/transport error is swallowed so the service still
+    starts and degrades through the normal health path (R15.24).
+    """
+    if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
+        return
+    region = os.environ.get("KOGNIT_LLM_AWS_REGION") or os.environ.get(
+        "AWS_REGION", "us-east-1"
+    )
+    try:
+        import boto3
+
+        ssm = boto3.client("ssm", region_name=region)
+        for param_name, env_var in _SSM_ENV_MAP.items():
+            if os.environ.get(env_var):
+                continue  # an explicit env var wins over SSM
+            try:
+                value = ssm.get_parameter(Name=param_name, WithDecryption=True)[
+                    "Parameter"
+                ]["Value"]
+            except Exception:
+                continue  # missing/unreadable parameter is non-fatal
+            if value:
+                os.environ[env_var] = value
+    except Exception:
+        # boto3 unavailable or client build failed: leave the environment as-is.
+        return
+
+
+_load_config_from_ssm()
+
 app = create_app(get_settings())
 handler = Mangum(app, api_gateway_base_path="/llm")  # R15.14, R15.36
