@@ -58,12 +58,7 @@ def _extract_first_json_object(text: str) -> str | None:
     for index in range(start, len(text)):
         char = text[index]
         if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
+            in_string, escaped = _step_in_string(char, escaped)
             continue
         if char == '"':
             in_string = True
@@ -74,6 +69,17 @@ def _extract_first_json_object(text: str) -> str | None:
             if depth == 0:
                 return text[start : index + 1]
     return None
+
+
+def _step_in_string(char: str, escaped: bool) -> tuple[bool, bool]:
+    """Advance the in-string scanner by one char: return (still_in_string, escaped)."""
+    if escaped:
+        return True, False
+    if char == "\\":
+        return True, True
+    if char == '"':
+        return False, False
+    return True, False
 
 
 class Message(BaseModel):

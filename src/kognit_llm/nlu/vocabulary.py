@@ -16,24 +16,29 @@ __all__ = [
     "map_intelex_severity",
 ]
 
+# Stored dim_incident_type.category values (defined once to avoid duplication).
+_INCIDENT = "Incident"
+_NEAR_MISS = "Near Miss"
+_HAZARD = "Hazard"
+
 # R8.15 — category terms to dim_incident_type.category values.
 CATEGORY_TERMS: dict[str, str] = {
-    "accidente": "Incident",
-    "accidentes": "Incident",
-    "incidente": "Incident",
-    "incidentes": "Incident",
-    "incident": "Incident",
-    "incidents": "Incident",
-    "casi accidente": "Near Miss",
-    "cuasi accidente": "Near Miss",
-    "casi accidentes": "Near Miss",
-    "near miss": "Near Miss",
-    "near misses": "Near Miss",
-    "peligro": "Hazard",
-    "peligros": "Hazard",
-    "condicion peligrosa": "Hazard",
-    "hazard": "Hazard",
-    "hazards": "Hazard",
+    "accidente": _INCIDENT,
+    "accidentes": _INCIDENT,
+    "incidente": _INCIDENT,
+    "incidentes": _INCIDENT,
+    "incident": _INCIDENT,
+    "incidents": _INCIDENT,
+    "casi accidente": _NEAR_MISS,
+    "cuasi accidente": _NEAR_MISS,
+    "casi accidentes": _NEAR_MISS,
+    "near miss": _NEAR_MISS,
+    "near misses": _NEAR_MISS,
+    "peligro": _HAZARD,
+    "peligros": _HAZARD,
+    "condicion peligrosa": _HAZARD,
+    "hazard": _HAZARD,
+    "hazards": _HAZARD,
 }
 
 # R8.16 — severity value terms to dim_incident_type.severity values.

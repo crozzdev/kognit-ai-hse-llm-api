@@ -73,13 +73,10 @@ def single_zero(start: date, end: date, language: Language) -> str:
     """A single-row zero-value answer, worded distinctly from the zero-row case."""
     period = format_period(start, end, language)
     if language == "es":
-        return (
-            f"Ningun evento coincidio con los filtros aplicados durante {period}. "
-            f"{_scope(language)}"
-        )
-    return (
-        f"Zero events matched the applied filters during {period}. {_scope(language)}"
-    )
+        body = f"Ningun evento coincidio con los filtros aplicados durante {period}."
+    else:
+        body = f"Zero events matched the applied filters during {period}."
+    return f"{body} {_scope(language)}"
 
 
 def grouped(

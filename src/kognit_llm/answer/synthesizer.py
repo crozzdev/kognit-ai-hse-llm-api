@@ -63,41 +63,62 @@ def synthesize(data: SynthesisInput, draft: DraftFn | None = None) -> str:
     numeric_index = _single_numeric_column(data)
 
     # Single row, single numeric column -> deterministic template, 0 model calls.
-    if len(data.rows) == 1 and numeric_index is not None:
-        value = _as_decimal(data.rows[0][numeric_index])
-        if value is not None and value == 0:
-            return templates.single_zero(data.start, data.end, data.language)
-        if value is not None:
-            return templates.single_aggregate(
-                value, data.measure_label, data.start, data.end, data.language
-            )
+    single = _single_row_answer(data, numeric_index)
+    if single is not None:
+        return single
 
     if not data.rows:
         return templates.zero_rows(data.start, data.end, data.language)
 
+    # A verified model draft, when available (draft + one regeneration, R9.13).
+    drafted = _drafted_answer(data, draft)
+    if drafted is not None:
+        return drafted
+
+    # Deterministic fallback for grouped/multi-column results, else UNCONFIRMED.
+    return _grouped_answer(data, numeric_index)
+
+
+def _single_row_answer(data: SynthesisInput, numeric_index: int | None) -> str | None:
+    """Render the single-row/single-numeric template, or None if not applicable."""
+    if len(data.rows) != 1 or numeric_index is None:
+        return None
+    value = _as_decimal(data.rows[0][numeric_index])
+    if value is None:
+        return None
+    if value == 0:
+        return templates.single_zero(data.start, data.end, data.language)
+    return templates.single_aggregate(
+        value, data.measure_label, data.start, data.end, data.language
+    )
+
+
+def _drafted_answer(data: SynthesisInput, draft: DraftFn | None) -> str | None:
+    """Return a fidelity-verified model draft, or None (R9.13, R9.15, R9.30)."""
+    if draft is None:
+        return None
     permitted = permitted_numbers(
         [cell for row in data.rows for cell in row],
         (data.start, data.end),
         data.row_cap,
     )
+    for _ in range(2):  # draft + one regeneration (R9.13, R9.30)
+        text = draft("synthesize")
+        if text is not None and verify(text, permitted, data.language):
+            return _post_pass(text)
+    return None
 
-    if draft is not None:
-        for _ in range(2):  # draft + one regeneration (R9.13, R9.30)
-            text = draft("synthesize")
-            if text is not None and verify(text, permitted, data.language):
-                return _post_pass(text)
 
-    # Deterministic fallback for grouped/multi-column results.
+def _grouped_answer(data: SynthesisInput, numeric_index: int | None) -> str:
+    """Deterministic grouped/truncated fallback, else the UNCONFIRMED message."""
     grouped_rows = _grouped_rows(data, numeric_index)
-    if grouped_rows is not None:
-        if data.truncated:
-            return templates.truncated(
-                grouped_rows, data.start, data.end, data.row_cap, data.language
-            )
-        return templates.grouped(grouped_rows, data.start, data.end, data.language)
-
-    # Multi-row/multi-column with no confirmable draft -> UNCONFIRMED (R9.15).
-    return templates.unconfirmed(data.language)
+    if grouped_rows is None:
+        return templates.unconfirmed(data.language)
+    if data.truncated:
+        return templates.truncated(
+            grouped_rows, data.start, data.end, data.row_cap, data.language
+        )
+    return templates.grouped(grouped_rows, data.start, data.end, data.language)
 
 
 def _single_numeric_column(data: SynthesisInput) -> int | None:

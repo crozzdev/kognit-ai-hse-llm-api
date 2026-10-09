@@ -154,9 +154,10 @@ class Settings(BaseSettings):
         values first, then environment, then dotenv, then file secrets.
         """
         init_data = getattr(init_settings, "init_kwargs", {})
-        if init_data.get(_ISOLATED_FLAG):
-            return (init_settings,)
-        return (init_settings, env_settings, dotenv_settings, file_secret_settings)
+        sources: tuple[PydanticBaseSettingsSource, ...] = (init_settings,)
+        if not init_data.get(_ISOLATED_FLAG):
+            sources += (env_settings, dotenv_settings, file_secret_settings)
+        return sources
 
     @field_validator("cors_origins", mode="before")
     @classmethod
