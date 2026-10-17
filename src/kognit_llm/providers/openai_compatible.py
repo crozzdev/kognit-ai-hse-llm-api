@@ -109,13 +109,16 @@ class OpenAICompatibleProvider(ProviderBase):
 
         Returns the OpenAI SDK's base error when the SDK is importable; otherwise
         a conservative fallback so the handler still works without the optional
-        dependency installed.
+        dependency installed. Builds one tuple and returns it at a single point.
         """
+        errors: tuple[type[BaseException], ...]
         try:
             from openai import OpenAIError  # ty: ignore[unresolved-import]
         except ImportError:
-            return (ConnectionError, TimeoutError, OSError, ValueError)
-        return (OpenAIError,)
+            errors = (ConnectionError, TimeoutError, OSError, ValueError)
+        else:
+            errors = (OpenAIError,)
+        return errors
 
     def _classify(self, err: BaseException) -> Exception:
         name = type(err).__name__.lower()

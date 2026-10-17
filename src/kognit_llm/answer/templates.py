@@ -64,16 +64,17 @@ def single_aggregate(
     return f"{number} {measure_label} were recorded during {period}. {scope}"
 
 
+_SINGLE_ZERO_BODY = {
+    "es": "Ningun evento coincidio con los filtros aplicados durante {period}.",
+    "en": "Zero events matched the applied filters during {period}.",
+}
+
+
 def single_zero(start: date, end: date, language: Language) -> str:
     """A single-row zero-value answer, worded distinctly from the zero-row case."""
     period = format_period(start, end, language)
-    scope = _scope(language)
-    if language == "es":
-        return (
-            f"Ningun evento coincidio con los filtros aplicados durante {period}. "
-            f"{scope}"
-        )
-    return f"Zero events matched the applied filters during {period}. {scope}"
+    body = _SINGLE_ZERO_BODY[language].format(period=period)
+    return f"{body} {_scope(language)}"
 
 
 def grouped(
