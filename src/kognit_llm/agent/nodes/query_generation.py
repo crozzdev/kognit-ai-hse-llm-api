@@ -9,6 +9,7 @@ requests a fresh statement, capped at two attempts per turn (R5.34).
 from kognit_llm.agent.nodes.deps import NodeDeps
 from kognit_llm.agent.state import TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
+from kognit_llm.nlu.intent import normalize_filter_values
 from kognit_llm.providers.base import (
     CompletionRequest,
     Message,
@@ -28,6 +29,11 @@ def make_query_generation(deps: NodeDeps):
         context = state.schema_context
         if intent is None or context is None:
             raise ValueError("query_generation requires intent and schema context")
+
+        # Map model-emitted filter values to their exact stored form (e.g. the
+        # shift "night" -> "Night") so the parameterized SQL matches under
+        # PostgreSQL's case-sensitive comparison (R8.15-R8.17).
+        intent = normalize_filter_values(intent)
 
         # A prior REJECT verdict in state means this is the regeneration attempt.
         is_regeneration = (

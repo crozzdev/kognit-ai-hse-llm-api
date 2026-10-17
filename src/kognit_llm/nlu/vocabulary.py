@@ -14,6 +14,7 @@ __all__ = [
     "SEVERITY_VALUE_TERMS",
     "SHIFT_VALUE_TERMS",
     "map_intelex_severity",
+    "resolve_filter_value",
 ]
 
 # Stored dim_incident_type.category values (defined once to avoid duplication).
@@ -101,3 +102,49 @@ INTELEX_SEVERITY: dict[str, str] = {
 def map_intelex_severity(code: str) -> str:
     """Map an Intelex severity code to a value; unknown code -> 'unknown' (R8.23)."""
     return INTELEX_SEVERITY.get(code, "unknown")
+
+
+# Attribute keyword -> term/value dictionary used to normalize a model-emitted
+# filter value to its exact stored form (R8.15-R8.17). The model names the filter
+# attribute inconsistently (``shift``, ``shift_name`` or ``dim_shift.shift_name``),
+# so the keyword is matched as a substring of the (lower-cased) attribute. Only
+# the enumerable dimensions with a curated vocabulary are covered; others pass
+# through. Order matters: the first keyword found in the attribute wins.
+_ATTRIBUTE_VALUE_TERMS: tuple[tuple[str, dict[str, str]], ...] = (
+    ("shift", SHIFT_VALUE_TERMS),
+    ("severity", SEVERITY_VALUE_TERMS),
+    ("category", CATEGORY_TERMS),
+)
+
+
+def resolve_filter_value(attribute: str, value: str) -> str:
+    """Return the exact stored value for a model-emitted filter ``value``.
+
+    Matches case- and diacritic-insensitively against the curated vocabulary for
+    ``attribute`` (for example a shift filter with ``"night"`` -> the stored
+    ``"Night"``). The attribute is matched loosely because the model may name it
+    ``shift``, ``shift_name`` or ``dim_shift.shift_name``. The match also accepts a
+    value whose folded form already equals a stored value, so a correctly-cased
+    value passes through. When the attribute has no curated vocabulary, or the
+    value matches nothing, the original ``value`` is returned unchanged so
+    behaviour never regresses.
+    """
+    from kognit_llm.nlu.value_resolver import fold_value
+
+    attribute_lower = attribute.lower()
+    terms = next(
+        (d for keyword, d in _ATTRIBUTE_VALUE_TERMS if keyword in attribute_lower),
+        None,
+    )
+    if terms is None:
+        return value
+    folded = fold_value(value)
+    # 1) A user-term key (e.g. "night", "noche") folds to the stored value.
+    for term, stored in terms.items():
+        if fold_value(term) == folded:
+            return stored
+    # 2) The value already equals a stored value under folding (e.g. "NIGHT").
+    for stored in set(terms.values()):
+        if fold_value(stored) == folded:
+            return stored
+    return value

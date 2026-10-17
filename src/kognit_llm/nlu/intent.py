@@ -34,6 +34,7 @@ __all__ = [
     "RawFilterTerm",
     "RawIntent",
     "build_analytics_intent",
+    "normalize_filter_values",
 ]
 
 Measure = Literal["incident_count", "severity_index", "action_count"]
@@ -263,3 +264,30 @@ def _carry_filters(
             for term in raw.filter_terms
         ]
     return list(retained.filters) if retained else []
+
+
+def normalize_filter_values(intent: AnalyticsIntent) -> AnalyticsIntent:
+    """Return ``intent`` with each filter's string values mapped to stored form.
+
+    A model-emitted filter value such as ``"night"`` is resolved to the exact
+    stored value ``"Night"`` (case- and diacritic-insensitive) for the enumerable
+    dimensions that have a curated vocabulary, so the parameterized SQL matches
+    the warehouse under PostgreSQL's case-sensitive comparison (R8.15-R8.17).
+    Non-string values and attributes without a vocabulary pass through unchanged.
+    """
+    from kognit_llm.nlu.vocabulary import resolve_filter_value
+
+    if not intent.filters:
+        return intent
+    new_filters = [
+        f.model_copy(
+            update={
+                "values": [
+                    resolve_filter_value(f.attribute, v) if isinstance(v, str) else v
+                    for v in f.values
+                ]
+            }
+        )
+        for f in intent.filters
+    ]
+    return intent.model_copy(update={"filters": new_filters})
