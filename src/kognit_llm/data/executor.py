@@ -88,17 +88,20 @@ class WarehouseExecutor:
             # performs no connection (R16.21-R16.22); open() is idempotent, so this
             # opens it once per execution environment and is a no-op thereafter.
             self._pool.open()
-            with self._pool.connection() as conn, conn.transaction():
-                with conn.cursor() as cur:
-                    # The statement is firewall-validated and hash-bound above,
-                    # so it is safe to pass to psycopg's LiteralString-typed API.
-                    cur.execute(cast(LiteralString, statement), list(params))
-                    raw_columns = (
-                        tuple(desc.name for desc in cur.description)
-                        if cur.description is not None
-                        else ()
-                    )
-                    fetched = cur.fetchmany(self._row_cap + 1)
+            with (
+                self._pool.connection() as conn,
+                conn.transaction(),
+                conn.cursor() as cur,
+            ):
+                # The statement is firewall-validated and hash-bound above, so it
+                # is safe to pass to psycopg's LiteralString-typed API.
+                cur.execute(cast(LiteralString, statement), list(params))
+                raw_columns = (
+                    tuple(desc.name for desc in cur.description)
+                    if cur.description is not None
+                    else ()
+                )
+                fetched = cur.fetchmany(self._row_cap + 1)
         except Exception as exc:  # translated; original never surfaced (R7.34)
             raise translate(exc) from None
 

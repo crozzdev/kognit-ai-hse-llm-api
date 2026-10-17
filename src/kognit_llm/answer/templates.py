@@ -59,14 +59,10 @@ def single_aggregate(
     number = format_number(value, language)
     period = format_period(start, end, language)
     if language == "es":
-        return (
-            f"Se registraron {number} {measure_label} durante {period}. "
-            f"{_scope(language)}"
-        )
-    return (
-        f"{number} {measure_label} were recorded during {period}. "
-        f"{_scope(language)}"
-    )
+        body = f"Se registraron {number} {measure_label} durante {period}."
+    else:
+        body = f"{number} {measure_label} were recorded during {period}."
+    return f"{body} {_scope(language)}"
 
 
 def single_zero(start: date, end: date, language: Language) -> str:

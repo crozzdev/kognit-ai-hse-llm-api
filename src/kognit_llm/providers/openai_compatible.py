@@ -87,7 +87,7 @@ class OpenAICompatibleProvider(ProviderBase):
                 timeout=request.timeout_ms / 1000,
                 response_format={"type": "json_object"},
             )
-        except Exception as err:  # noqa: BLE001 - classified below
+        except Exception as err:  # noqa: BLE001  # NOSONAR: SDK raises many types; _classify maps them
             raise self._classify(err) from None
 
         choice = response.choices[0]

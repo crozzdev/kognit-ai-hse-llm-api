@@ -220,8 +220,9 @@ class _TimeoutError(Exception):
 def test_auth_error_is_classified(monkeypatch: pytest.MonkeyPatch) -> None:
     client = FakeOpenAIClient(None, _AuthError("bad key"))
     provider = _make_provider(monkeypatch, client=client)
+    request = _request()
     with pytest.raises(AuthProviderError):
-        provider._transport(_request())
+        provider._transport(request)
 
 
 def test_timeout_error_is_classified_as_retryable(
@@ -229,5 +230,6 @@ def test_timeout_error_is_classified_as_retryable(
 ) -> None:
     client = FakeOpenAIClient(None, _TimeoutError("timed out"))
     provider = _make_provider(monkeypatch, client=client)
+    request = _request()
     with pytest.raises(RetryableProviderError):
-        provider._transport(_request())
+        provider._transport(request)

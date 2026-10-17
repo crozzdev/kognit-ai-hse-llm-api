@@ -20,7 +20,6 @@ from kognit_llm.providers.base import (
     CompletionRequest,
     Message,
     ProviderError,
-    ProviderOutputError,
 )
 
 __all__ = ["make_answer_synthesis"]
@@ -75,7 +74,7 @@ def make_answer_synthesis(deps: NodeDeps):
             )
             try:
                 completion = deps.provider.complete(request)
-            except (ProviderError, ProviderOutputError):
+            except ProviderError:
                 return None
             calls[0] += 1
             telemetry.record_provider_call(

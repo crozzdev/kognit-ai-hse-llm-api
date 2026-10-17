@@ -61,7 +61,7 @@ def build_chat_router(
         message = normalize_message(payload.message)
         if not message or len(message) > settings.message_max_chars:
             # The field validator normally rejects these; guard the direct path.
-            return _validation_response(request_id, conversation_id)
+            return _validation_response(request_id)
 
         started = datetime.now(UTC)
         context = deps.store.get_context("DEMO", conversation_id)
@@ -207,7 +207,7 @@ def _query_executed(state: TurnState, settings: "Settings") -> str | None:
     return None
 
 
-def _validation_response(request_id: str, conversation_id: str) -> JSONResponse:
+def _validation_response(request_id: str) -> JSONResponse:
     return JSONResponse(
         status_code=422,
         content={

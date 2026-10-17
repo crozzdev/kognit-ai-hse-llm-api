@@ -204,8 +204,9 @@ def test_access_denied_is_classified_as_auth_error(
     _patch_boto3(monkeypatch, client)
 
     provider = _make_provider()
+    request = _request()
     with pytest.raises(AuthProviderError):
-        provider._transport(_request())
+        provider._transport(request)
 
 
 def test_throttling_is_classified_as_retryable_error(
@@ -215,5 +216,6 @@ def test_throttling_is_classified_as_retryable_error(
     _patch_boto3(monkeypatch, client)
 
     provider = _make_provider()
+    request = _request()
     with pytest.raises(RetryableProviderError):
-        provider._transport(_request())
+        provider._transport(request)

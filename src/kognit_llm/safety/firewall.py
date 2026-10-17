@@ -192,19 +192,34 @@ def _check_schema_and_objects(
     analysis: "sql_ast.Analysis", allowlist: AllowList, approved_schema: str
 ) -> RejectionReason | None:
     """Schema/table/column allow-list checks (13-16); first reason or None."""
+    return (
+        _check_tables(analysis, allowlist, approved_schema)
+        or _check_columns(analysis, allowlist)
+    )
+
+
+def _check_tables(
+    analysis: "sql_ast.Analysis", allowlist: AllowList, approved_schema: str
+) -> RejectionReason | None:
+    """System-catalog, approved-schema and allow-listed-table checks (13-15)."""
     for table in analysis.tables:
         if (
             table.schema in {"pg_catalog", "information_schema"}
             or table.name.startswith("pg_")
         ):
             return RejectionReason.SYSTEM_CATALOG_REFERENCE
-    for table in analysis.tables:
         if table.schema and table.schema != approved_schema:
             return RejectionReason.UNAPPROVED_SCHEMA
-    table_names = [t.name for t in analysis.tables]
-    for name in table_names:
-        if not allowlist.has_table(name):
+        if not allowlist.has_table(table.name):
             return RejectionReason.UNAPPROVED_TABLE
+    return None
+
+
+def _check_columns(
+    analysis: "sql_ast.Analysis", allowlist: AllowList
+) -> RejectionReason | None:
+    """Every column resolves to exactly one allow-listed owner (16)."""
+    table_names = [t.name for t in analysis.tables]
     for column in analysis.columns:
         if column.name == "*":
             continue

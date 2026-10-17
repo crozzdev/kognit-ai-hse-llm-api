@@ -81,7 +81,7 @@ def build_graph(deps: NodeDeps):
     add("query_validation", guarded("query_validation", make_query_validation(deps)))
     add("query_execution", guarded("query_execution", make_query_execution(deps)))
     add("answer_synthesis", guarded("answer_synthesis", make_answer_synthesis(deps)))
-    add("terminal_error", guarded("terminal_error", make_terminal_error(deps)))
+    add("terminal_error", guarded("terminal_error", make_terminal_error()))
     add(
         "conversation_context_update",
         guarded("conversation_context_update", make_conversation_context_update(deps)),

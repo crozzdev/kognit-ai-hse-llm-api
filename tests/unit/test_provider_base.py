@@ -148,8 +148,9 @@ def test_complete_repairs_once_then_succeeds() -> None:
 def test_complete_raises_when_repair_also_fails() -> None:
     """Both the first reply and the repair fail to parse -> ProviderOutputError."""
     provider = FakeProvider([_completed("still not json"), _completed("also not json")])
+    request = _request()
     with pytest.raises(ProviderOutputError):
-        provider.complete(_request())
+        provider.complete(request)
     assert provider.transport_calls == 2
 
 
@@ -158,16 +159,18 @@ def test_complete_raises_when_repair_also_fails() -> None:
 
 def test_complete_content_filtered_raises_without_parse() -> None:
     provider = FakeProvider([RawCompletion("", 0, 0, "CONTENT_FILTERED")])
+    request = _request()
     with pytest.raises(ProviderOutputError) as excinfo:
-        provider.complete(_request())
+        provider.complete(request)
     assert excinfo.value.finish_reason == "CONTENT_FILTERED"
     assert provider.transport_calls == 1
 
 
 def test_complete_error_finish_reason_raises() -> None:
     provider = FakeProvider([RawCompletion("", 0, 0, "ERROR")])
+    request = _request()
     with pytest.raises(ProviderOutputError) as excinfo:
-        provider.complete(_request())
+        provider.complete(request)
     assert excinfo.value.finish_reason == "ERROR"
 
 
@@ -191,8 +194,9 @@ def test_complete_raises_when_max_output_tokens_twice() -> None:
             RawCompletion("", 0, 0, "MAX_OUTPUT_TOKENS"),
         ]
     )
+    request = _request()
     with pytest.raises(ProviderOutputError) as excinfo:
-        provider.complete(_request())
+        provider.complete(request)
     assert excinfo.value.finish_reason == "MAX_OUTPUT_TOKENS"
 
 
@@ -212,8 +216,9 @@ def test_complete_retries_retryable_error_then_succeeds() -> None:
 
 def test_complete_exhausts_retries_and_raises() -> None:
     provider = FakeProvider([RetryableProviderError("timeout")], max_retries=2)
+    request = _request()
     with pytest.raises(RetryableProviderError):
-        provider.complete(_request())
+        provider.complete(request)
     # Initial attempt plus two retries.
     assert provider.transport_calls == 3
 
@@ -233,8 +238,9 @@ def test_complete_raises_when_auth_error_persists_after_refresh() -> None:
     provider = FakeProvider(
         [AuthProviderError("denied"), AuthProviderError("still denied")]
     )
+    request = _request()
     with pytest.raises(AuthProviderError):
-        provider.complete(_request())
+        provider.complete(request)
     # Exactly one refresh; the second auth error is not retried again.
     assert provider.refresh_calls == 1
     assert provider.transport_calls == 2

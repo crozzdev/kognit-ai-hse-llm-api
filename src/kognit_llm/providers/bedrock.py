@@ -92,7 +92,7 @@ class BedrockProvider(ProviderBase):
                     "maxTokens": request.max_output_tokens,
                 },
             )
-        except Exception as err:  # noqa: BLE001 - classified below
+        except Exception as err:  # noqa: BLE001  # NOSONAR: SDK raises many types; _classify maps them
             raise self._classify(err) from None
 
         result = cast(dict[str, Any], response)

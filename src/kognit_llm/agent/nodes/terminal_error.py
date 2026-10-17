@@ -8,7 +8,6 @@ node already wrote (R10.22).
 
 from typing import Literal
 
-from kognit_llm.agent.nodes.deps import NodeDeps
 from kognit_llm.agent.state import ErrorCategory, TurnOutcome, TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
 from kognit_llm.answer import templates
@@ -18,8 +17,12 @@ __all__ = ["make_terminal_error"]
 Language = Literal["es", "en"]
 
 
-def make_terminal_error(deps: NodeDeps):
-    """Return the terminal_error node bound to ``deps``."""
+def make_terminal_error():
+    """Return the terminal_error node.
+
+    Unlike the other node factories this one needs no ``NodeDeps``: it only maps
+    the routed terminal condition to a fixed per-category user message.
+    """
 
     def node(state: TurnState, telemetry: TurnTelemetry) -> dict[str, object]:
         language: Literal["es", "en"] = (

@@ -39,13 +39,13 @@ def validate_cross_field(settings: "Settings") -> "Settings":
     """
     violations: list[str] = []
 
-    if not settings.db_statement_timeout_ms < settings.turn_timeout_ms:
+    if settings.db_statement_timeout_ms >= settings.turn_timeout_ms:
         violations.append(
             "db_statement_timeout_ms must be strictly less than turn_timeout_ms "
             f"({settings.db_statement_timeout_ms} >= {settings.turn_timeout_ms})"
         )
 
-    if not settings.model_timeout_ms < settings.turn_timeout_ms:
+    if settings.model_timeout_ms >= settings.turn_timeout_ms:
         violations.append(
             "model_timeout_ms must be strictly less than turn_timeout_ms "
             f"({settings.model_timeout_ms} >= {settings.turn_timeout_ms})"
