@@ -106,14 +106,15 @@ def map_intelex_severity(code: str) -> str:
 
 # Attribute keyword -> term/value dictionary used to normalize a model-emitted
 # filter value to its exact stored form (R8.15-R8.17). The model names the filter
-# attribute inconsistently (``shift``, ``shift_name`` or ``dim_shift.shift_name``),
-# so the keyword is matched as a substring of the (lower-cased) attribute. Only
-# the enumerable dimensions with a curated vocabulary are covered; others pass
+# attribute inconsistently and in either language (``shift``, ``shift_name``,
+# ``dim_shift.shift_name`` or the Spanish ``turno``), so each English/Spanish
+# keyword is matched as a substring of the (lower-cased) attribute. Only the
+# enumerable dimensions with a curated vocabulary are covered; others pass
 # through. Order matters: the first keyword found in the attribute wins.
-_ATTRIBUTE_VALUE_TERMS: tuple[tuple[str, dict[str, str]], ...] = (
-    ("shift", SHIFT_VALUE_TERMS),
-    ("severity", SEVERITY_VALUE_TERMS),
-    ("category", CATEGORY_TERMS),
+_ATTRIBUTE_VALUE_TERMS: tuple[tuple[tuple[str, ...], dict[str, str]], ...] = (
+    (("shift", "turno"), SHIFT_VALUE_TERMS),
+    (("severity", "gravedad", "severidad"), SEVERITY_VALUE_TERMS),
+    (("category", "categoria", "tipo"), CATEGORY_TERMS),
 )
 
 
@@ -133,7 +134,11 @@ def resolve_filter_value(attribute: str, value: str) -> str:
 
     attribute_lower = attribute.lower()
     terms = next(
-        (d for keyword, d in _ATTRIBUTE_VALUE_TERMS if keyword in attribute_lower),
+        (
+            d
+            for keywords, d in _ATTRIBUTE_VALUE_TERMS
+            if any(keyword in attribute_lower for keyword in keywords)
+        ),
         None,
     )
     if terms is None:
