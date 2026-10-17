@@ -54,6 +54,11 @@ def make_answer_synthesis(deps: NodeDeps):
             raise ValueError("answer_synthesis requires intent and a result set")
 
         calls = [state.model_call_count]
+        language_instruction = (
+            "Write the answer text in Spanish."
+            if language == "es"
+            else "Write the answer text in English."
+        )
 
         def draft(_: str) -> str | None:
             if calls[0] - state.model_call_count >= 2:
@@ -61,9 +66,10 @@ def make_answer_synthesis(deps: NodeDeps):
             request = CompletionRequest[_DraftOut](
                 call_type="answer",
                 system_instruction=(
-                    "Answer the HSE analytics question faithfully. Respond with the "
-                    "JSON object only: no explanation, no reasoning, no markdown, no "
-                    "code fences, no text before or after the object."
+                    "Answer the HSE analytics question faithfully. "
+                    f"{language_instruction} Respond with the JSON object only: no "
+                    "explanation, no reasoning, no markdown, no code fences, no "
+                    "text before or after the object."
                 ),
                 messages=(Message(role="user", content=state.raw_message),),
                 output_model=_DraftOut,

@@ -17,17 +17,19 @@ __all__ = ["make_terminal_error"]
 Language = Literal["es", "en"]
 
 
-def make_terminal_error():
-    """Return the terminal_error node.
+def make_terminal_error(answer_language: Literal["auto", "es", "en"] = "auto"):
+    """Return the terminal_error node bound to the configured answer language.
 
-    Unlike the other node factories this one needs no ``NodeDeps``: it only maps
-    the routed terminal condition to a fixed per-category user message.
+    It maps the routed terminal condition to a fixed per-category user message.
+    When ``answer_language`` is ``es``/``en`` that language is used directly; when
+    it is ``auto`` the message language is detected from the user's message.
     """
 
     def node(state: TurnState, telemetry: TurnTelemetry) -> dict[str, object]:
-        language: Literal["es", "en"] = (
-            "es" if _looks_spanish(state.raw_message) else "en"
-        )
+        if answer_language in ("es", "en"):
+            language: Literal["es", "en"] = answer_language
+        else:
+            language = "es" if _looks_spanish(state.raw_message) else "en"
         outcome, category, message = _classify_terminal(state, language)
         update: dict[str, object] = {"answer_text": message, "error_category": category}
         # turn_outcome is write-once (R10.22): only set it if not already set.

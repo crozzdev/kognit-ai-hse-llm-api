@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # ── Message and answer shaping ───────────────────────────────────────────
     message_max_chars: Annotated[int, Field(ge=1, le=8000)] = 2000
     answer_max_chars: Annotated[int, Field(ge=1, le=2000)] = 600
-    answer_language: Literal["auto", "es", "en"] = "auto"
+    answer_language: Literal["auto", "es", "en"] = "es"
 
     # ── Dates and intent ─────────────────────────────────────────────────────
     reference_timezone: str = "America/Bogota"
