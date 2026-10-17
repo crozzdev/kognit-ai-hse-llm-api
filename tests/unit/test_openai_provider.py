@@ -209,12 +209,12 @@ def test_finish_reason_mapping(
     assert raw.finish_reason == expected
 
 
-class _AuthError(Exception):
-    pass
+class _AuthError(OSError):
+    """A transport error whose class name classifies as auth."""
 
 
-class _TimeoutError(Exception):
-    pass
+class _TimeoutError(TimeoutError):
+    """A transport error whose class name classifies as retryable."""
 
 
 def test_auth_error_is_classified(monkeypatch: pytest.MonkeyPatch) -> None:

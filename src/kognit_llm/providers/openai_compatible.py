@@ -87,7 +87,7 @@ class OpenAICompatibleProvider(ProviderBase):
                 timeout=request.timeout_ms / 1000,
                 response_format={"type": "json_object"},
             )
-        except Exception as err:  # noqa: BLE001  # NOSONAR: SDK raises many types; _classify maps them
+        except self._transport_errors() as err:
             raise self._classify(err) from None
 
         choice = response.choices[0]
@@ -103,7 +103,21 @@ class OpenAICompatibleProvider(ProviderBase):
             provider_request_id=getattr(response, "id", "") or "",
         )
 
-    def _classify(self, err: Exception) -> Exception:
+    @staticmethod
+    def _transport_errors() -> tuple[type[BaseException], ...]:
+        """The exception types the transport may raise, for a narrow ``except``.
+
+        Returns the OpenAI SDK's base error when the SDK is importable; otherwise
+        a conservative fallback so the handler still works without the optional
+        dependency installed.
+        """
+        try:
+            from openai import OpenAIError  # ty: ignore[unresolved-import]
+        except ImportError:
+            return (ConnectionError, TimeoutError, OSError, ValueError)
+        return (OpenAIError,)
+
+    def _classify(self, err: BaseException) -> Exception:
         name = type(err).__name__.lower()
         if "auth" in name or "permission" in name:
             return AuthProviderError(str(err))

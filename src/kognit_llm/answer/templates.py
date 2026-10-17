@@ -58,21 +58,22 @@ def single_aggregate(
     """One figure with its measure label, period and the data-scope sentence."""
     number = format_number(value, language)
     period = format_period(start, end, language)
+    scope = _scope(language)
     if language == "es":
-        body = f"Se registraron {number} {measure_label} durante {period}."
-    else:
-        body = f"{number} {measure_label} were recorded during {period}."
-    return f"{body} {_scope(language)}"
+        return f"Se registraron {number} {measure_label} durante {period}. {scope}"
+    return f"{number} {measure_label} were recorded during {period}. {scope}"
 
 
 def single_zero(start: date, end: date, language: Language) -> str:
     """A single-row zero-value answer, worded distinctly from the zero-row case."""
     period = format_period(start, end, language)
+    scope = _scope(language)
     if language == "es":
-        body = f"Ningun evento coincidio con los filtros aplicados durante {period}."
-    else:
-        body = f"Zero events matched the applied filters during {period}."
-    return f"{body} {_scope(language)}"
+        return (
+            f"Ningun evento coincidio con los filtros aplicados durante {period}. "
+            f"{scope}"
+        )
+    return f"Zero events matched the applied filters during {period}. {scope}"
 
 
 def grouped(

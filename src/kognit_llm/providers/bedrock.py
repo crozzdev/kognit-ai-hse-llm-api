@@ -77,6 +77,8 @@ class BedrockProvider(ProviderBase):
     def _transport(
         self, request: "CompletionRequest[BaseModel]"
     ) -> RawCompletion:
+        from botocore.exceptions import BotoCoreError, ClientError
+
         client = self._client_or_build()
         messages = [
             {"role": m.role, "content": [{"text": m.content}]}
@@ -92,7 +94,7 @@ class BedrockProvider(ProviderBase):
                     "maxTokens": request.max_output_tokens,
                 },
             )
-        except Exception as err:  # noqa: BLE001  # NOSONAR: SDK raises many types; _classify maps them
+        except (BotoCoreError, ClientError) as err:
             raise self._classify(err) from None
 
         result = cast(dict[str, Any], response)

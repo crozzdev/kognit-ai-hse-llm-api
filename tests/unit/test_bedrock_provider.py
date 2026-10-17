@@ -10,6 +10,7 @@ sockets).
 from typing import Any
 
 import pytest
+from botocore.exceptions import ClientError
 from pydantic import BaseModel
 
 from kognit_llm.config.secrets import SecretResolver
@@ -189,12 +190,24 @@ def test_transport_extracts_concatenated_text_blocks(
     assert raw.text == '{"decision":"IN_SCOPE"}'
 
 
-class _AccessDeniedException(Exception):
-    pass
+class _AccessDeniedException(ClientError):
+    """Mimics a boto3 service error whose name classifies as auth."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            {"Error": {"Code": "AccessDeniedException", "Message": message}},
+            "Converse",
+        )
 
 
-class _ThrottlingException(Exception):
-    pass
+class _ThrottlingException(ClientError):
+    """Mimics a boto3 throttling error, classified as retryable."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            {"Error": {"Code": "ThrottlingException", "Message": message}},
+            "Converse",
+        )
 
 
 def test_access_denied_is_classified_as_auth_error(
