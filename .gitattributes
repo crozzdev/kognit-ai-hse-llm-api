@@ -1,0 +1,4 @@
+# Shell scripts must use LF so they run on the Linux CI/CD runners and Lambda.
+# Windows checkouts had introduced CRLF into build.sh, which broke `bash build.sh`
+# on the deploy runner ($'\r': command not found). Pinning *.sh to LF prevents it.
+*.sh text eol=lf
