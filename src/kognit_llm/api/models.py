@@ -15,14 +15,33 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "CONVERSATION_ID_PATTERN",
+    "HISTORY_MAX_MESSAGES",
     "ChatRequest",
     "ChatResponse",
+    "ConversationMessage",
     "ErrorBody",
     "HealthBody",
     "normalize_message",
 ]
 
 CONVERSATION_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
+
+# Hard upper bound on how many prior messages the request may carry; the route
+# further trims to the configured conversation turn maximum.
+HISTORY_MAX_MESSAGES = 40
+
+
+class ConversationMessage(BaseModel):
+    """One prior conversation message supplied by the client (R12 continuity).
+
+    ``role`` distinguishes the user's messages from the assistant's answers so
+    the agent can reconstruct the exchange; ``content`` is the message text.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    role: Literal["user", "assistant"]
+    content: Annotated[str, Field(min_length=1, max_length=8000)]
 
 
 def normalize_message(raw: str) -> str:
@@ -44,6 +63,12 @@ class ChatRequest(BaseModel):
     conversation_id: (
         Annotated[str, Field(pattern=CONVERSATION_ID_PATTERN)] | None
     ) = None
+    # Prior turns supplied by the client so context survives Lambda cold starts
+    # and instance changes (R12.18/R12.20). Oldest first; the route trims to the
+    # configured turn maximum. Omitted or empty means no prior context.
+    history: Annotated[
+        list[ConversationMessage], Field(max_length=HISTORY_MAX_MESSAGES)
+    ] = []
 
 
 class ChatResponse(BaseModel):

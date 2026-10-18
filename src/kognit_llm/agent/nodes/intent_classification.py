@@ -10,6 +10,7 @@ failure yields ``REJECTED`` intent so the graph routes to ``terminal_error`` wit
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from kognit_llm.agent.history import context_messages
 from kognit_llm.agent.nodes.deps import NodeDeps
 from kognit_llm.agent.state import TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
@@ -62,10 +63,14 @@ def make_intent_classification(deps: NodeDeps):
     """Return the intent_classification node bound to ``deps``."""
 
     def node(state: TurnState, telemetry: TurnTelemetry) -> dict[str, object]:
+        prior = context_messages(
+            state.conversation_context,
+            max_turns=deps.settings.conversation_turn_max,
+        )
         request = CompletionRequest[RawIntent](
             call_type="intent",
             system_instruction=_SYSTEM,
-            messages=(Message(role="user", content=state.raw_message),),
+            messages=(*prior, Message(role="user", content=state.raw_message)),
             output_model=RawIntent,
             temperature=deps.settings.model_temperature,
             max_output_tokens=deps.settings.model_max_output_tokens,

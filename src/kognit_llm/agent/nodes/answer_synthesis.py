@@ -10,6 +10,7 @@ from typing import Literal, cast
 
 from pydantic import BaseModel
 
+from kognit_llm.agent.history import context_messages
 from kognit_llm.agent.nodes.deps import NodeDeps
 from kognit_llm.agent.state import TurnOutcome, TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
@@ -59,6 +60,10 @@ def make_answer_synthesis(deps: NodeDeps):
             if language == "es"
             else "Write the answer text in English."
         )
+        prior = context_messages(
+            state.conversation_context,
+            max_turns=deps.settings.conversation_turn_max,
+        )
 
         def draft(_: str) -> str | None:
             if calls[0] - state.model_call_count >= 2:
@@ -71,7 +76,7 @@ def make_answer_synthesis(deps: NodeDeps):
                     "explanation, no reasoning, no markdown, no code fences, no "
                     "text before or after the object."
                 ),
-                messages=(Message(role="user", content=state.raw_message),),
+                messages=(*prior, Message(role="user", content=state.raw_message)),
                 output_model=_DraftOut,
                 temperature=deps.settings.model_temperature,
                 max_output_tokens=deps.settings.model_max_output_tokens,

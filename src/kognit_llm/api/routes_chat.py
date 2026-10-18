@@ -16,7 +16,13 @@ from fastapi.responses import JSONResponse
 from kognit_llm.agent.guard import CURRENT_TELEMETRY
 from kognit_llm.agent.state import ErrorCategory, TurnOutcome, TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
-from kognit_llm.api.models import ChatRequest, ChatResponse, normalize_message
+from kognit_llm.api.models import (
+    ChatRequest,
+    ChatResponse,
+    ConversationMessage,
+    normalize_message,
+)
+from kognit_llm.memory.store import TurnRecord
 from kognit_llm.observability.fields import ENVIRONMENT_LOG_VALUE
 from kognit_llm.observability.logger import RequestLogger
 
@@ -64,7 +70,14 @@ def build_chat_router(
             return _validation_response(request_id)
 
         started = datetime.now(UTC)
-        context = deps.store.get_context("DEMO", conversation_id)
+        # Prefer the client-supplied history (stateless continuity across Lambda
+        # cold starts); fall back to the in-process store when none is sent.
+        if payload.history:
+            context: tuple[TurnRecord, ...] = _history_to_records(
+                payload.history, started, settings.conversation_turn_max
+            )
+        else:
+            context = deps.store.get_context("DEMO", conversation_id)
         seed = TurnState(
             request_id=request_id,
             conversation_id=conversation_id,
@@ -216,3 +229,38 @@ def _validation_response(request_id: str) -> JSONResponse:
             "request_id": request_id,
         },
     )
+
+
+def _history_to_records(
+    history: list[ConversationMessage],
+    now: datetime,
+    turn_max: int,
+) -> tuple[TurnRecord, ...]:
+    """Build retained turn records from the client-supplied conversation history.
+
+    Pairs each ``user`` message with the next ``assistant`` message into one
+    ``TurnRecord`` (oldest first), keeping at most ``turn_max`` turns. The
+    scope/intent fields are placeholders — no graph node reads them from history;
+    the records exist so the agent can reconstruct the exchange for the model
+    (R12.18/R12.20). ``analytics_intent_json`` is left absent: the client cannot
+    supply a resolved intent, and no node requires it.
+    """
+    records: list[TurnRecord] = []
+    pending_user: str | None = None
+    for item in history:
+        if item.role == "user":
+            # A new user message supersedes an unanswered previous one.
+            pending_user = item.content
+        elif pending_user is not None:  # assistant answer closes a turn
+            records.append(
+                TurnRecord(
+                    user_message=pending_user,
+                    answer_text=item.content,
+                    scope_decision="IN_SCOPE",
+                    intent="GENERAL_CHAT",
+                    requested_at=now,
+                    completed_at=now,
+                )
+            )
+            pending_user = None
+    return tuple(records[-turn_max:])
