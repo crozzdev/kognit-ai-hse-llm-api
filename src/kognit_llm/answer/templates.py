@@ -93,10 +93,10 @@ def grouped(
         text = f"Durante {period}: {items}."
         if not_enumerated > 0:
             text += f" ({not_enumerated} grupos adicionales no listados.)"
-        return f"{text} {_scope(language)}"
-    text = f"During {period}: {items}."
-    if not_enumerated > 0:
-        text += f" ({not_enumerated} more groups not listed.)"
+    else:
+        text = f"During {period}: {items}."
+        if not_enumerated > 0:
+            text += f" ({not_enumerated} more groups not listed.)"
     return f"{text} {_scope(language)}"
 
 

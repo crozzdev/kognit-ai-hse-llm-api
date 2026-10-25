@@ -58,43 +58,11 @@ def make_answer_synthesis(deps: NodeDeps):
             raise ValueError("answer_synthesis requires intent and a result set")
 
         calls = [state.model_call_count]
-        language_instruction = (
-            "Write the answer text in Spanish."
-            if language == "es"
-            else "Write the answer text in English."
-        )
         prior = context_messages(
             state.conversation_context,
             max_turns=deps.settings.conversation_turn_max,
         )
-
-        def draft(_: str) -> str | None:
-            if calls[0] - state.model_call_count >= 2:
-                return None
-            request = CompletionRequest[_DraftOut](
-                call_type="answer",
-                system_instruction=(
-                    "Answer the HSE analytics question faithfully. "
-                    f"{language_instruction} Respond with the JSON object only: no "
-                    "explanation, no reasoning, no markdown, no code fences, no "
-                    "text before or after the object."
-                ),
-                messages=(*prior, Message(role="user", content=state.raw_message)),
-                output_model=_DraftOut,
-                temperature=deps.settings.model_temperature,
-                max_output_tokens=deps.settings.model_max_output_tokens,
-                timeout_ms=deps.settings.model_timeout_ms,
-                request_id=state.request_id,
-            )
-            try:
-                completion = deps.provider.complete(request)
-            except ProviderError:
-                return None
-            calls[0] += 1
-            telemetry.record_provider_call(
-                "answer", completion.prompt_tokens, completion.completion_tokens
-            )
-            return completion.output.text
+        draft = _make_draft(deps, state, telemetry, language, calls, prior)
 
         data = SynthesisInput(
             columns=result.columns,
@@ -114,6 +82,57 @@ def make_answer_synthesis(deps: NodeDeps):
         }
 
     return node
+
+
+def _make_draft(
+    deps: NodeDeps,
+    state: TurnState,
+    telemetry: TurnTelemetry,
+    language: Literal["es", "en"],
+    calls: list[int],
+    prior: tuple[Message, ...],
+):
+    """Return the fidelity-loop draft callback bound to this turn.
+
+    ``calls`` is a single-element mutable list tracking the running model-call
+    count; the callback returns ``None`` once two drafts have been produced or on
+    any provider failure, which stops the synthesizer's fidelity loop.
+    """
+    language_instruction = (
+        "Write the answer text in Spanish."
+        if language == "es"
+        else "Write the answer text in English."
+    )
+
+    def draft(_: str) -> str | None:
+        if calls[0] - state.model_call_count >= 2:
+            return None
+        request = CompletionRequest[_DraftOut](
+            call_type="answer",
+            system_instruction=(
+                "Answer the HSE analytics question faithfully. "
+                f"{language_instruction} Respond with the JSON object only: no "
+                "explanation, no reasoning, no markdown, no code fences, no "
+                "text before or after the object."
+            ),
+            messages=(*prior, Message(role="user", content=state.raw_message)),
+            output_model=_DraftOut,
+            temperature=deps.settings.model_temperature,
+            max_output_tokens=deps.settings.model_max_output_tokens,
+            timeout_ms=deps.settings.model_timeout_ms,
+            request_id=state.request_id,
+        )
+        try:
+            completion = deps.provider.complete(request)
+        except ProviderError:
+            return None
+        calls[0] += 1
+        telemetry.record_provider_call(
+            "answer", completion.prompt_tokens, completion.completion_tokens
+        )
+        return completion.output.text
+
+    return draft
 
 
 _GENERAL_CHAT_SYSTEM = (
