@@ -30,8 +30,10 @@ cd packages
 zip -r "$ZIP_PATH" .
 cd ..
 
-# 5. Add your FastAPI app code into the same zip file
-zip -r "$ZIP_PATH" src/*.py
+# 5. Add the full application source tree into the same zip file
+#    (this service uses the src/kognit_llm/ package, so we zip the whole `src`
+#    tree instead of `src/*.py`, which would leave the package out)
+zip -r "$ZIP_PATH" src -x '*__pycache__*' '*.pyc' '*.pyo'
 
 # 6. Clean up temporary files
 rm -rf packages

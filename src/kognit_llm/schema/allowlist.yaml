@@ -1,0 +1,70 @@
+# Approved schema allow-list artifact (R4.1-R4.13, R4.19, R6.32).
+#
+# The single configuration-owned source of the physical tables, columns, measures
+# and dimension attributes that Schema_Context_Provider exposes and Query_Firewall
+# admits. Read by both components; carries the version identifier (R4.13). All
+# identifiers are lowercase (R4.2). Columns are scoped per table, so a name
+# allow-listed for one table is not allow-listed for another (R4.19).
+#
+# dim_text_event and fact_incidents.sk_text_event are absent by construction
+# (R4.6, R4.34) — the free-text narrative dimension is never exposed.
+version: "hse-dwh-allowlist-2026-09-07.1"
+approved_schema: public          # overridden by KOGNIT_LLM_DB_SCHEMA
+functions: [count, sum, avg, min, max, round, coalesce, extract, date_trunc, to_char]
+tables:
+  fact_incidents:
+    kind: fact
+    columns: [record_no, sk_date, sk_location, sk_type, sk_shift, sk_cause,
+              sk_status, sk_equipment, sk_high_risk_area]
+    measures: [incident_count, severity_index]
+  fact_actions:
+    kind: fact
+    columns: [record_no, sk_action, sk_date, sk_location]
+    measures: [action_count]
+  dim_date:
+    kind: dimension
+    columns: [sk_date, date, day, month, quarter, year, is_holiday, day_name]
+  dim_location:
+    kind: dimension
+    columns: [sk_location, plant, area_on_site]
+    enumerate: [plant]
+  dim_incident_type:
+    kind: dimension
+    columns: [sk_type, category, severity, potential_severity]
+    enumerate: [category, severity, potential_severity]
+  dim_shift:
+    kind: dimension
+    columns: [sk_shift, shift_name, start_time, end_time]
+    enumerate: [shift_name]
+  dim_cause:
+    kind: dimension
+    columns: [sk_cause, root_cause, subcategory, criticality_level]
+    enumerate: [criticality_level]
+  dim_status:
+    kind: dimension
+    columns: [sk_status, status, investigation_required]
+    enumerate: [status]
+  dim_action_details:
+    kind: dimension
+    columns: [sk_action, action_english_description, action_local_language_description]
+  dim_equipment:
+    kind: dimension
+    columns: [sk_equipment, equipment_name, other_equipment, sub_equipment,
+              machine_code, is_equipment_involved, equipment_category]
+  dim_ppe:
+    kind: dimension
+    columns: [sk_ppe, ppe_description, ppe_type, is_ppe_worn]
+    enumerate: [ppe_type]
+  dim_injury:
+    kind: dimension
+    columns: [sk_injury, injury_original_description, injury_type, body_part]
+  dim_high_risk_area:
+    kind: dimension
+    columns: [sk_high_risk_area, high_risk_area_category,
+              high_risk_area_category_standardized]
+  bridge_incident_ppe:
+    kind: bridge
+    columns: [record_no, sk_ppe, is_ppe_worn]
+  bridge_incident_injury:
+    kind: bridge
+    columns: [record_no, sk_injury]
