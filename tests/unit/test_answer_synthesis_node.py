@@ -12,26 +12,30 @@ The provider is a hand-rolled fake implementing the ``ModelProvider`` protocol;
 """
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Any, cast
 
 import pytest
+from pydantic import BaseModel
 
 from kognit_llm.agent.nodes.answer_synthesis import make_answer_synthesis
 from kognit_llm.agent.nodes.deps import NodeDeps
 from kognit_llm.agent.state import TurnOutcome, TurnState
 from kognit_llm.agent.telemetry import TurnTelemetry
 from kognit_llm.answer import templates
-from kognit_llm.config.settings import settings_from_mapping
-from kognit_llm.data.executor import ResultSet
+from kognit_llm.config.settings import Settings, settings_from_mapping
+from kognit_llm.data.executor import ResultSet, WarehouseExecutor
+from kognit_llm.memory.store import ConversationStore
 from kognit_llm.nlu.dates import TimeRange
-from kognit_llm.nlu.intent import AnalyticsIntent
+from kognit_llm.nlu.intent import AnalyticsIntent, Measure
 from kognit_llm.providers.base import (
     CompletionRequest,
     CompletionResult,
     ProviderError,
     RetryableProviderError,
 )
+from kognit_llm.schema.allowlist import AllowList
 
 _START = date(2026, 1, 1)
 _END = date(2026, 1, 31)
@@ -48,9 +52,11 @@ class _FakeProvider:
 
     provider_id: str = "fake"
     replies: list[object] = field(default_factory=list)
-    requests: list[CompletionRequest[object]] = field(default_factory=list)
+    requests: list[CompletionRequest[Any]] = field(default_factory=list)
 
-    def complete(self, request):  # noqa: ANN001 - protocol signature
+    def complete(
+        self, request: CompletionRequest[Any]
+    ) -> CompletionResult[BaseModel]:
         self.requests.append(request)
         if not self.replies:
             raise AssertionError("unexpected extra provider call")
@@ -66,33 +72,34 @@ class _FakeProvider:
         )
 
 
-def _settings(**overrides):
+def _settings(**overrides: object) -> Settings:
     base = settings_from_mapping({})
     return base.model_copy(update=overrides) if overrides else base
 
 
-def _deps(provider, **settings_overrides):
+def _deps(provider: _FakeProvider, **settings_overrides: object) -> NodeDeps:
+    # The executor, store and allowlist are never touched by this node; cast
+    # ``None`` to the declared interfaces so the bundle type-checks.
     return NodeDeps(
         settings=_settings(**settings_overrides),
         provider=provider,
-        executor=None,  # unused by this node
-        store=None,  # unused by this node
-        allowlist=None,  # unused by this node
+        executor=cast(WarehouseExecutor, None),
+        store=cast(ConversationStore, None),
+        allowlist=cast(AllowList, None),
     )
 
 
-def _state(**overrides) -> TurnState:
-    base = {
-        "request_id": "req-1",
-        "conversation_id": "conv-1",
-        "raw_message": "How many incidents last month?",
-        "turn_started_at": datetime(2026, 2, 1, tzinfo=timezone.utc),
-    }
-    base.update(overrides)
-    return TurnState(**base)
+def _state(**overrides: object) -> TurnState:
+    base = TurnState(
+        request_id="req-1",
+        conversation_id="conv-1",
+        raw_message="How many incidents last month?",
+        turn_started_at=datetime(2026, 2, 1, tzinfo=UTC),
+    )
+    return base.model_copy(update=overrides) if overrides else base
 
 
-def _intent(measure: str = "incident_count") -> AnalyticsIntent:
+def _intent(measure: Measure = "incident_count") -> AnalyticsIntent:
     return AnalyticsIntent(
         measure=measure,
         time_range=TimeRange(start_date=_START, end_date=_END),
@@ -101,7 +108,9 @@ def _intent(measure: str = "incident_count") -> AnalyticsIntent:
     )
 
 
-def _run(deps, state):
+def _run(
+    deps: NodeDeps, state: TurnState
+) -> tuple[dict[str, object], TurnTelemetry]:
     telemetry = TurnTelemetry()
     node = make_answer_synthesis(deps)
     return node(state, telemetry), telemetry
